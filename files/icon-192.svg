@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="38" fill="#07080f"/>
+  <rect width="192" height="192" rx="38" fill="url(#g)"/>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="192" y2="192" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#a78bfa" stop-opacity="0.12"/>
+    </linearGradient>
+  </defs>
+  <!-- Plane body -->
+  <g transform="translate(96,96)">
+    <path d="M0,-42 C4,-42 8,-36 8,-28 L8,8 L28,20 L28,28 L8,22 L8,36 L16,40 L16,46 L0,42 L-16,46 L-16,40 L-8,36 L-8,22 L-28,28 L-28,20 L-8,8 L-8,-28 C-8,-36 -4,-42 0,-42Z" fill="#00e5ff"/>
+  </g>
+  <!-- Glow ring -->
+  <circle cx="96" cy="96" r="72" fill="none" stroke="#00e5ff" stroke-width="1.5" stroke-opacity="0.2"/>
+</svg>

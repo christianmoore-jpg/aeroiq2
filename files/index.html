@@ -1,0 +1,2623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroIQ — Live Airport Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400;500&family=Cabinet+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#07080f">
+<meta name="description" content="AeroIQ live airport intelligence dashboard with live airport data, saved airports, notifications, install support, and offline caching.">
+<meta name="application-name" content="AeroIQ">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-512.svg">
+<style>
+  :root {
+    --bg:#07080f; --surface:#0e101c; --surface2:#151829; --surface3:#1c2038;
+    --border:rgba(255,255,255,0.06); --border2:rgba(255,255,255,0.11);
+    --accent:#00e5ff; --accent2:#ff6b35; --accent3:#a78bfa;
+    --green:#00ff88; --yellow:#ffd60a; --red:#ff4757; --orange:#ff9500;
+    --text:#e8eaf6; --muted:#4a5070; --muted2:#7880a0;
+    --font-display:'Syne',sans-serif; --font-body:'Cabinet Grotesk',sans-serif; --font-mono:'DM Mono',monospace;
+    --r:14px; --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;padding-bottom:calc(70px + var(--safe-b))}
+
+  /* ── HEADER ── */
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;padding-top:calc(14px + env(safe-area-inset-top,0px));border-bottom:1px solid var(--border);background:rgba(7,8,15,0.96);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);position:sticky;top:0;z-index:200}
+  .logo{font-family:var(--font-display);font-weight:800;font-size:19px;display:flex;align-items:center;gap:8px}
+  .logo-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent3));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+  .logo em{color:var(--accent);font-style:normal}
+  .hdr-right{display:flex;align-items:center;gap:6px}
+  .live-pill{display:flex;align-items:center;gap:4px;font-family:var(--font-mono);font-size:9px;color:var(--green);background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.15);padding:4px 9px;border-radius:20px}
+  .live-dot{width:4px;height:4px;border-radius:50%;background:var(--green);animation:blink 1.4s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+  .btn-sm{background:none;border:1px solid var(--border2);color:var(--muted2);font-family:var(--font-mono);font-size:10px;padding:5px 9px;border-radius:6px;cursor:pointer;transition:all .2s;min-width:32px;text-align:center}
+  .btn-sm:hover,.btn-sm:active{color:var(--accent);border-color:var(--accent)}
+  .spin-anim{animation:spin .9s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── INSTALL BANNER ── */
+  .install-banner{display:none;align-items:center;justify-content:space-between;gap:12px;padding:11px 18px;background:linear-gradient(90deg,rgba(0,229,255,.08),rgba(167,139,250,.06));border-bottom:1px solid rgba(0,229,255,.15)}
+  .install-banner.show{display:flex}
+  .ib-left{display:flex;align-items:center;gap:9px}
+  .ib-icon{font-size:18px}
+  .ib-text{font-family:var(--font-mono);font-size:11px;color:var(--text)}
+  .ib-sub{font-size:9px;color:var(--muted2);margin-top:1px}
+  .ib-btn{background:var(--accent);color:var(--bg);font-family:var(--font-display);font-weight:700;font-size:11px;padding:7px 14px;border:none;border-radius:7px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+  .ib-dismiss{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px;flex-shrink:0}
+
+  /* ── OFFLINE BANNER ── */
+  .offline-banner{display:none;align-items:center;justify-content:space-between;gap:12px;padding:9px 18px;background:rgba(255,149,0,.1);border-bottom:1px solid rgba(255,149,0,.2);font-family:var(--font-mono);font-size:10px;color:#ffd9b0}
+  .offline-banner.show{display:flex}
+
+  /* ── AIRPORT SEARCH BAR ── */
+  .ap-bar{border-bottom:1px solid var(--border);background:rgba(7,8,15,0.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:10px 16px 9px}
+  .ap-search-wrap{position:relative;max-width:520px}
+  .ap-search-input-row{display:flex;align-items:center;gap:0;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:0 12px;transition:border-color .2s,box-shadow .2s}
+  .ap-search-input-row:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,255,.07)}
+  .ap-search-icon{font-size:12px;color:var(--muted);flex-shrink:0;margin-right:7px}
+  .ap-search-input{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:var(--font-mono);font-size:13px;padding:10px 0;letter-spacing:.3px}
+  .ap-search-input::placeholder{color:var(--muted)}
+  .ap-search-clear{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 0 2px 6px;display:none;line-height:1}
+  .ap-dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:12px;overflow:hidden;z-index:300;display:none;box-shadow:0 16px 48px rgba(0,0,0,.7);animation:dropIn .15s ease;max-height:280px;overflow-y:auto}
+  @keyframes dropIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  .ap-dropdown.open{display:block}
+  .ap-drop-section{padding:5px 0}
+  .ap-drop-label{font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;padding:5px 12px 3px}
+  .ap-drop-item{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;transition:background .15s}
+  .ap-drop-item:hover,.ap-drop-item.focused{background:rgba(0,229,255,.06)}
+  .ap-drop-code{font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--accent);width:34px;flex-shrink:0}
+  .ap-drop-name{font-size:12px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ap-drop-city{font-family:var(--font-mono);font-size:10px;color:var(--muted);white-space:nowrap}
+  .ap-drop-divider{height:1px;background:var(--border);margin:1px 0}
+  .ap-drop-empty{font-family:var(--font-mono);font-size:11px;color:var(--muted);padding:14px 12px;text-align:center}
+
+  /* ── AIRPORT CHIPS ── */
+  .ap-quick-row{display:flex;align-items:center;gap:6px;margin-top:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
+  .ap-quick-row::-webkit-scrollbar{display:none}
+  .ap-quick-label{font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;white-space:nowrap}
+  .chip{font-family:var(--font-mono);font-size:10px;padding:4px 9px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--muted2);cursor:pointer;transition:all .16s;letter-spacing:.3px;white-space:nowrap;flex-shrink:0}
+  .chip:hover,.chip:active{border-color:rgba(0,229,255,.35);color:var(--accent);background:rgba(0,229,255,.05)}
+  .chip.on{background:rgba(0,229,255,0.1);border-color:var(--accent);color:var(--accent)}
+  .ap-name-bar{padding:5px 20px;font-family:var(--font-mono);font-size:10px;color:var(--muted);background:rgba(10,12,22,.5);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+  .ap-name-bar span{color:var(--text)}
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:150;background:rgba(7,8,15,0.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border);padding:8px 0 calc(8px + var(--safe-b));display:flex;align-items:center;justify-content:space-around}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 12px;cursor:pointer;border:none;background:none;color:var(--muted);transition:color .2s;min-width:56px}
+  .nav-item.active{color:var(--accent)}
+  .nav-icon{font-size:19px;line-height:1}
+  .nav-label{font-family:var(--font-mono);font-size:9px;letter-spacing:.3px}
+
+  /* ── PAGES ── */
+  .page{display:none}
+  .page.active{display:block}
+
+  /* ── GRID / CARDS ── */
+  .main{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:1240px;margin:0 auto}
+  @media(max-width:700px){.main{grid-template-columns:1fr;padding:10px 12px;gap:10px}}
+  .full{grid-column:1/-1}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;position:relative;overflow:hidden;animation:up .3s ease both}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.05),transparent)}
+  @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  .ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
+  .ct{font-family:var(--font-display);font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px}
+  .ci{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+  .ci-b{background:rgba(0,229,255,.1)} .ci-o{background:rgba(255,107,53,.1)}
+  .ci-p{background:rgba(167,139,250,.1)} .ci-g{background:rgba(0,255,136,.1)}
+  .ci-y{background:rgba(255,214,10,.1)}
+  .badge{font-family:var(--font-mono);font-size:8px;padding:3px 6px;border-radius:4px;white-space:nowrap}
+  .b-live{background:rgba(0,255,136,.08);color:var(--green);border:1px solid rgba(0,255,136,.16)}
+  .b-crowd{background:rgba(0,229,255,.08);color:var(--accent);border:1px solid rgba(0,229,255,.16)}
+  .b-est{background:rgba(255,214,10,.06);color:var(--yellow);border:1px solid rgba(255,214,10,.13)}
+  .b-ai{background:rgba(167,139,250,.08);color:var(--accent3);border:1px solid rgba(167,139,250,.18)}
+
+  .cg{color:var(--green)} .cy{color:var(--yellow)} .cr{color:var(--red)} .co{color:var(--orange)}
+  .fg{background:var(--green)} .fy{background:var(--yellow)} .fr{background:var(--red)}
+
+  .loader{display:flex;align-items:center;justify-content:center;gap:6px;padding:20px;font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+  .err{font-family:var(--font-mono);font-size:10px;color:var(--red);padding:8px 11px;background:rgba(255,71,87,.06);border:1px solid rgba(255,71,87,.12);border-radius:8px}
+
+  /* WEATHER */
+  .wx-big{text-align:center;margin-bottom:12px}
+  .wx-icon{font-size:32px;margin-bottom:3px}
+  .wx-temp{font-family:var(--font-display);font-weight:800;font-size:28px}
+  .wx-desc{font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-top:2px}
+  .wx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .wx-item{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px;text-align:center}
+  .wx-val{font-family:var(--font-display);font-weight:700;font-size:15px}
+  .wx-lbl{font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;margin-top:2px}
+
+  /* PLANES */
+  .plane-list{display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto}
+  .plane-list::-webkit-scrollbar{width:2px}.plane-list::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+  .plane-row{display:grid;grid-template-columns:76px 1fr 58px 58px;gap:5px;align-items:center;padding:7px 10px;background:var(--surface2);border-radius:7px;border:1px solid var(--border)}
+  .pcall{font-family:var(--font-mono);font-size:11px;color:var(--accent3);font-weight:500}
+  .pcountry{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pval{font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:right}
+
+  /* FLIGHTS */
+  .fl-tabs{display:flex;gap:4px}
+  .tab{font-family:var(--font-mono);font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;transition:all .2s}
+  .tab.on{background:rgba(0,229,255,.09);border-color:var(--accent);color:var(--accent)}
+  .fl-list{display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto}
+  .fl-list::-webkit-scrollbar{width:2px}.fl-list::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+  .fl-row{display:grid;grid-template-columns:54px 1fr 44px auto;align-items:center;gap:7px;padding:9px 10px;background:var(--surface2);border-radius:9px;border:1px solid var(--border);cursor:pointer;transition:border-color .2s}
+  .fl-row:hover{border-color:rgba(0,229,255,.18)}
+  .flnum{font-family:var(--font-mono);font-size:11px;color:var(--accent)}
+  .fldst{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .flsub{font-size:10px;color:var(--muted);font-family:var(--font-mono)}
+  .fltime{font-family:var(--font-mono);font-size:11px;text-align:right}
+  .fsbadge{font-size:9px;font-family:var(--font-mono);padding:3px 6px;border-radius:3px;white-space:nowrap}
+  .fs-on{background:rgba(0,255,136,.08);color:var(--green)}
+  .fs-dl{background:rgba(255,71,87,.08);color:var(--red)}
+  .fs-bo{background:rgba(0,229,255,.08);color:var(--accent)}
+  .fs-la{background:rgba(255,255,255,.04);color:var(--muted)}
+  .fs-sc{background:rgba(167,139,250,.08);color:var(--accent3)}
+
+  /* CROWDSOURCE */
+  .crowd-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;gap:10px;transition:border-color .2s}
+  .rpt-btn{background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.18);color:var(--accent);font-family:var(--font-mono);font-size:10px;padding:5px 8px;border-radius:6px;cursor:pointer;transition:all .2s;white-space:nowrap}
+  .rpt-btn:hover,.rpt-btn:active{background:rgba(0,229,255,.14)}
+  .feed-wrap{margin-top:10px;border-top:1px solid var(--border);padding-top:10px}
+  .feed-label{font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px}
+  .feed-item{display:flex;align-items:center;justify-content:space-between;padding:7px 9px;background:var(--surface3);border-radius:7px;border:1px solid var(--border);margin-bottom:4px}
+  .feed-time{font-family:var(--font-mono);font-size:9px;color:var(--muted)}
+  .feed-wait{font-family:var(--font-mono);font-size:11px;font-weight:500}
+  .feed-loc{font-size:10px;color:var(--muted2)}
+  .no-reports{font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:12px;text-align:center;border:1px dashed rgba(255,255,255,.05);border-radius:8px}
+
+  /* TSA */
+  .tsa-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tsa-cp{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px}
+  .cp-name{font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.5px}
+  .wait-big{font-family:var(--font-display);font-weight:800;font-size:22px;line-height:1;margin-bottom:3px}
+  .wait-lbl{font-size:10px;color:var(--muted);font-family:var(--font-mono)}
+  .sbar{margin-top:7px;height:2px;border-radius:2px;background:rgba(255,255,255,.04);overflow:hidden}
+  .sfill{height:100%;border-radius:2px;transition:width .8s ease}
+  .tsa-actions{display:flex;align-items:center;justify-content:space-between;margin-top:7px}
+  .crowd-count{font-family:var(--font-mono);font-size:9px;color:var(--muted)}
+
+  /* PARKING */
+  .park-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);margin-bottom:6px}
+  .park-l{flex:1;min-width:0}
+  .park-name{font-size:12px;font-weight:600}
+  .park-detail{font-size:10px;color:var(--muted);font-family:var(--font-mono)}
+  .park-r{display:flex;align-items:center;gap:8px}
+  .park-spots{font-family:var(--font-display);font-weight:700;font-size:17px}
+  .park-sub{font-size:9px;color:var(--muted);font-family:var(--font-mono);text-align:right}
+  .mini-bar{width:40px;height:2px;background:rgba(255,255,255,.04);border-radius:2px;overflow:hidden;margin-top:3px}
+  .mini-fill{height:100%;border-radius:2px}
+
+  /* SERVICES */
+  .svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:700px){.svc-grid{grid-template-columns:1fr}}
+  .svc-sec{display:flex;flex-direction:column;gap:5px}
+  .sec-lbl{font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:2px}
+  .svc-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);transition:border-color .2s}
+  .svc-l{display:flex;align-items:center;gap:8px}
+  .svc-e{font-size:14px}
+  .svc-name{font-size:12px;font-weight:500}
+  .svc-loc{font-size:10px;color:var(--muted);font-family:var(--font-mono)}
+  .svc-wait{font-family:var(--font-mono);font-size:11px;font-weight:500}
+
+  /* CONGESTION */
+  .cong-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .cong-block{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 7px;text-align:center;position:relative;overflow:hidden;cursor:pointer;transition:transform .2s}
+  .cong-block:hover{transform:translateY(-2px)}
+  .cong-block::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px}
+  .cong-block.low::after{background:var(--green)}.cong-block.med::after{background:var(--yellow)}.cong-block.high::after{background:var(--red)}
+  .cong-l{font-family:var(--font-display);font-weight:800;font-size:17px;margin-bottom:2px}
+  .cong-n{font-size:9px;color:var(--muted);font-family:var(--font-mono);margin-bottom:4px}
+  .cong-v{font-size:9px;font-family:var(--font-mono)}
+  .lv-low{color:var(--green)}.lv-med{color:var(--yellow)}.lv-high{color:var(--red)}
+
+  /* BUSYNESS */
+  .chart-wrap{display:flex;align-items:flex-end;gap:3px;height:64px;margin-top:4px}
+  .chart-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end}
+  .chart-bar{width:100%;border-radius:3px 3px 0 0;min-height:2px}
+  .chart-bar.now{box-shadow:0 0 8px rgba(0,229,255,.45)}
+  .chart-lbl{font-family:var(--font-mono);font-size:7px;color:var(--muted)}
+  .chart-lbl.now{color:var(--accent)}
+
+  .insight{margin-top:11px;padding:10px 12px;background:rgba(0,229,255,.03);border:1px solid rgba(0,229,255,.09);border-radius:9px;display:flex;gap:8px}
+  .insight-icon{font-size:13px;flex-shrink:0;margin-top:1px}
+  .insight-text{font-size:11px;line-height:1.65;color:rgba(232,234,246,.7);font-family:var(--font-mono)}
+  .insight-text strong{color:var(--accent);font-weight:500}
+
+  /* DEPARTURE PLANNER */
+  .planner-hero{background:linear-gradient(135deg,rgba(0,229,255,.05) 0%,rgba(167,139,250,.05) 100%);border:1px solid rgba(0,229,255,.12);border-radius:12px;padding:16px;margin-bottom:13px}
+  .planner-title{font-family:var(--font-display);font-weight:800;font-size:17px;color:var(--accent);margin-bottom:3px}
+  .planner-sub{font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-bottom:16px}
+  .planner-inputs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:14px}
+  @media(max-width:600px){.planner-inputs{grid-template-columns:1fr}}
+  .p-field{display:flex;flex-direction:column;gap:4px}
+  .p-label{font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+  .p-input{background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:8px 11px;border-radius:8px;outline:none;transition:border-color .2s;width:100%}
+  .p-input:focus{border-color:var(--accent)}
+  .p-input option{background:var(--surface2);color:var(--text)}
+  .p-btn{background:var(--accent);color:var(--bg);font-family:var(--font-display);font-weight:700;font-size:13px;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;transition:opacity .2s;align-self:flex-end}
+  .p-btn:hover,.p-btn:active{opacity:.85}
+  .timeline{display:flex;flex-direction:column;gap:0}
+  .tl-item{display:flex;gap:13px;position:relative}
+  .tl-left{display:flex;flex-direction:column;align-items:center;gap:0;width:30px;flex-shrink:0}
+  .tl-dot{width:11px;height:11px;border-radius:50%;border:2px solid;flex-shrink:0;margin-top:3px;z-index:1;background:var(--bg)}
+  .tl-dot.go{border-color:var(--green);box-shadow:0 0 7px rgba(0,255,136,.35)}
+  .tl-dot.warn{border-color:var(--yellow);box-shadow:0 0 7px rgba(255,214,10,.25)}
+  .tl-dot.crit{border-color:var(--red);box-shadow:0 0 7px rgba(255,71,87,.25)}
+  .tl-dot.info{border-color:var(--accent)}
+  .tl-dot.done{border-color:var(--muted)}
+  .tl-line{flex:1;width:1px;background:var(--border)}
+  .tl-right{flex:1;padding-bottom:14px}
+  .tl-time{font-family:var(--font-mono);font-size:10px;color:var(--accent);margin-bottom:2px}
+  .tl-step{font-size:12px;font-weight:600;margin-bottom:2px}
+  .tl-detail{font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.5}
+  .tl-detail strong{color:var(--muted2)}
+  .tl-badge{display:inline-block;font-family:var(--font-mono);font-size:9px;padding:2px 6px;border-radius:3px;margin-left:5px;vertical-align:middle}
+  .tl-b-ok{background:rgba(0,255,136,.1);color:var(--green)}
+  .tl-b-warn{background:rgba(255,214,10,.1);color:var(--yellow)}
+  .tl-b-bad{background:rgba(255,71,87,.1);color:var(--red)}
+  .window-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:13px}
+  .win-card{border-radius:10px;padding:12px 10px;border:1px solid;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+  .win-card:hover{transform:translateY(-2px)}
+  .win-card.best{border-color:rgba(0,255,136,.28);background:rgba(0,255,136,.04)}
+  .win-card.ok{border-color:rgba(255,214,10,.2);background:rgba(255,214,10,.03)}
+  .win-card.tight{border-color:rgba(255,71,87,.2);background:rgba(255,71,87,.03)}
+  .win-card.best::before{content:'BEST';position:absolute;top:7px;right:7px;font-family:var(--font-mono);font-size:7px;color:var(--green);letter-spacing:1px}
+  .win-time{font-family:var(--font-display);font-weight:800;font-size:18px;margin-bottom:2px}
+  .win-label{font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-bottom:5px}
+  .win-detail{font-family:var(--font-mono);font-size:9px;line-height:1.6}
+  .win-buffer{font-family:var(--font-display);font-weight:700;font-size:12px;margin-top:3px}
+  .risk-row{display:flex;align-items:center;gap:9px;margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)}
+  .risk-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);width:78px;flex-shrink:0}
+  .risk-bar-wrap{flex:1;height:5px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
+  .risk-bar{height:100%;border-radius:3px;transition:width .8s ease}
+  .risk-val{font-family:var(--font-mono);font-size:10px;font-weight:500;width:34px;text-align:right;flex-shrink:0}
+  .planner-refresh{font-family:var(--font-mono);font-size:9px;color:var(--muted);display:flex;align-items:center;gap:4px;margin-top:9px}
+  .pr-dot{width:4px;height:4px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
+  .fl-time-input{background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:var(--font-mono);font-size:18px;font-weight:700;padding:7px 11px;border-radius:8px;outline:none;width:110px;text-align:center}
+  .fl-time-input:focus{border-color:var(--accent)}
+
+  /* MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:500;display:none;align-items:flex-end;justify-content:center;padding:0}
+  @media(min-width:600px){.modal-overlay{align-items:center;padding:20px}}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--surface);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:440px;animation:sheetIn .3s cubic-bezier(.17,.84,.44,1)}
+  @media(min-width:600px){.modal{border-radius:16px;animation:modalIn .25s ease}}
+  @keyframes sheetIn{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  @keyframes modalIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+  .modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
+  @media(min-width:600px){.modal-handle{display:none}}
+  .modal-title{font-family:var(--font-display);font-weight:700;font-size:17px;margin-bottom:4px}
+  .modal-sub{font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-bottom:18px}
+  .modal-section{margin-bottom:14px}
+  .modal-lbl{font-family:var(--font-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px}
+  .slider-wrap{position:relative;padding:0 3px}
+  input[type=range]{width:100%;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--surface3);outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);cursor:pointer;box-shadow:0 0 8px rgba(0,229,255,.35)}
+  .slider-val{font-family:var(--font-display);font-weight:800;font-size:34px;text-align:center;margin:8px 0 3px;transition:color .2s}
+  .slider-lbl{font-family:var(--font-mono);font-size:11px;color:var(--muted);text-align:center}
+  .quick-btns{display:flex;gap:6px;flex-wrap:wrap}
+  .qb{font-family:var(--font-mono);font-size:11px;padding:6px 11px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;transition:all .2s}
+  .qb:hover,.qb.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.07)}
+  .modal-actions{display:flex;gap:8px;margin-top:18px}
+  .btn-submit{flex:1;background:var(--accent);color:var(--bg);font-family:var(--font-display);font-weight:700;font-size:14px;border:none;padding:14px;border-radius:10px;cursor:pointer;transition:opacity .2s}
+  .btn-submit:hover,.btn-submit:active{opacity:.85}
+  .btn-cancel{background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--font-mono);font-size:12px;padding:12px 14px;border-radius:10px;cursor:pointer;transition:all .2s}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:calc(80px + var(--safe-b));left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid rgba(0,255,136,.3);color:var(--green);font-family:var(--font-mono);font-size:11px;padding:9px 16px;border-radius:8px;z-index:999;display:none;animation:toastIn .3s ease;white-space:nowrap}
+  @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+  /* FAVORITES PAGE */
+  .fav-hero{padding:20px 0 6px;text-align:center}
+  .fav-title{font-family:var(--font-display);font-weight:800;font-size:22px;margin-bottom:4px}
+  .fav-sub{font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+  .fav-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+  .fav-row{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:border-color .2s}
+  .fav-row:hover,.fav-row:active{border-color:rgba(0,229,255,.25)}
+  .fav-code{font-family:var(--font-display);font-weight:800;font-size:20px;color:var(--accent);width:48px;flex-shrink:0}
+  .fav-info{flex:1;min-width:0}
+  .fav-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fav-city{font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+  .fav-actions{display:flex;gap:6px;align-items:center}
+  .fav-remove{background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--font-mono);font-size:10px;padding:5px 9px;border-radius:6px;cursor:pointer;transition:all .2s}
+  .fav-remove:hover{color:var(--red);border-color:rgba(255,71,87,.3)}
+  .empty-state{text-align:center;padding:36px 20px;font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+  .empty-icon{font-size:36px;margin-bottom:8px}
+  .recents-section{margin-top:20px}
+  .section-heading{font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  .recents-grid{display:flex;flex-wrap:wrap;gap:7px}
+  .recent-chip{font-family:var(--font-mono);font-size:11px;padding:6px 11px;border-radius:7px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text);cursor:pointer;transition:all .18s}
+  .recent-chip:hover,.recent-chip:active{border-color:var(--accent);color:var(--accent)}
+
+  /* SETTINGS PAGE */
+  .settings-list{display:flex;flex-direction:column;gap:8px}
+  .setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px}
+  .setting-l{flex:1;min-width:0}
+  .setting-title{font-size:13px;font-weight:600;margin-bottom:2px}
+  .setting-desc{font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.5}
+  .toggle{width:44px;height:24px;background:var(--surface3);border-radius:12px;position:relative;cursor:pointer;transition:background .2s;border:none;flex-shrink:0}
+  .toggle.on{background:var(--accent)}
+  .toggle::after{content:'';position:absolute;width:18px;height:18px;background:white;border-radius:50%;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+  .toggle.on::after{transform:translateX(20px)}
+  .setting-btn{background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.18);color:var(--accent);font-family:var(--font-mono);font-size:10px;padding:7px 12px;border-radius:7px;cursor:pointer;transition:all .2s;white-space:nowrap}
+  .setting-btn:hover,.setting-btn:active{background:rgba(0,229,255,.13)}
+  .setting-btn.danger{color:var(--red);border-color:rgba(255,71,87,.2);background:rgba(255,71,87,.05)}
+
+  /* ACCESSIBILITY */
+  .skip-link{position:absolute;left:16px;top:-52px;background:var(--accent);color:var(--bg);padding:9px 13px;border-radius:7px;font-family:var(--font-mono);font-size:11px;z-index:1000;text-decoration:none;transition:top .2s ease}
+  .skip-link:focus{top:12px}
+  .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+
+  /* MISC */
+  .fl-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+  .fl-source{font-family:var(--font-mono);font-size:9px;color:var(--muted)}
+  .section-source{font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:1px}
+  .favorite-star{font-size:15px;line-height:1}
+
+  /* ── GEOLOCATION BUTTON ── */
+  .geo-btn{background:none;border:1px solid var(--border2);color:var(--muted2);font-size:14px;width:32px;height:28px;border-radius:6px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .geo-btn:hover,.geo-btn:active{color:var(--accent);border-color:var(--accent)}
+  .geo-btn.locating{color:var(--yellow);border-color:var(--yellow);animation:geopulse 1s infinite}
+  .geo-btn.located{color:var(--green);border-color:rgba(0,255,136,.35)}
+  @keyframes geopulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+  /* ── GEO BANNER ── */
+  .geo-banner{display:none;align-items:center;gap:10px;padding:9px 18px;background:rgba(0,229,255,.05);border-bottom:1px solid rgba(0,229,255,.12);font-family:var(--font-mono);font-size:11px;color:var(--text)}
+  .geo-banner.show{display:flex}
+  .geo-banner-icon{font-size:15px}
+  .geo-banner-airport{color:var(--accent);font-weight:500}
+  .geo-banner-dismiss{background:none;border:none;color:var(--muted);cursor:pointer;margin-left:auto;font-size:13px;padding:2px 4px}
+
+  /* ── SHARE BUTTON on flight rows ── */
+  .fl-share{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:4px 5px;border-radius:5px;transition:color .2s;flex-shrink:0;line-height:1}
+  .fl-share:hover,.fl-share:active{color:var(--accent)}
+
+  /* ── SHARE BUTTON in TSA/wait sections ── */
+  .share-row{display:flex;align-items:center;justify-content:flex-end;margin-top:10px;padding-top:9px;border-top:1px solid var(--border)}
+  .share-btn{display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--border2);color:var(--muted2);font-family:var(--font-mono);font-size:10px;padding:6px 12px;border-radius:7px;cursor:pointer;transition:all .2s}
+  .share-btn:hover,.share-btn:active{color:var(--accent);border-color:rgba(0,229,255,.3)}
+  .share-btn svg{flex-shrink:0}
+
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<div class="offline-banner" id="offline-banner" role="status" aria-live="polite"><span id="offline-copy">Offline mode — showing cached and local data.</span><button class="utility-btn alt" type="button" onclick="refreshAll()">Retry sync</button></div>
+
+<!-- REPORT MODAL -->
+<div class="modal-overlay" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-sub">
+  <div class="modal">
+    <div class="modal-handle" aria-hidden="true"></div>
+    <div class="modal-title" id="modal-title">Report Wait Time</div>
+    <div class="modal-sub" id="modal-sub">Help others by sharing current conditions</div>
+    <div class="modal-section">
+      <div class="modal-lbl">Current wait time</div>
+      <div class="slider-val" id="slider-display">5</div>
+      <div class="slider-lbl" id="slider-unit-lbl">minutes</div>
+      <div class="slider-wrap" style="margin-top:10px">
+        <input type="range" id="wait-slider" min="0" max="90" value="5" oninput="onSlider(this.value)">
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-lbl">Quick pick</div>
+      <div class="quick-btns" id="quick-btns"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" type="button" onclick="closeModal()" aria-label="Cancel report">Cancel</button>
+      <button class="btn-submit" type="button" onclick="submitReport()" aria-label="Submit report">✓ Submit Report</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite">✓ Report submitted — thanks!</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-mark" aria-hidden="true">✈</div>
+    Aero<em>IQ</em>
+  </div>
+  <div class="hdr-right">
+    <div class="live-pill" aria-label="Live data"><div class="live-dot"></div>LIVE</div>
+    <button class="btn-sm" id="unit-btn" type="button" onclick="cycleSpeedUnit()" title="Change speed unit" aria-label="Change aircraft speed unit">kt</button>
+    <button class="geo-btn" id="geo-btn" type="button" onclick="detectNearestAirport()" title="Detect nearest airport" aria-label="Detect nearest airport">📍</button>
+    <button class="btn-sm" type="button" onclick="refreshAll()" aria-label="Refresh airport data">↻</button>
+  </div>
+</header>
+
+<div class="ap-bar">
+  <div class="ap-search-wrap">
+    <label class="sr-only" for="ap-search">Search for an airport</label>
+    <div class="ap-search-input-row">
+      <span class="ap-search-icon" aria-hidden="true">🔍</span>
+      <input class="ap-search-input" id="ap-search" type="text" placeholder="Search airport — name, code, or city…" autocomplete="off" spellcheck="false" aria-label="Search airport by name, code, or city"
+        oninput="onApSearch(this.value)"
+        onkeydown="onApSearchKey(event)"
+        onfocus="openDropdown()"
+      >
+      <button class="ap-search-clear" id="ap-clear" type="button" onclick="clearApSearch()" title="Clear" aria-label="Clear airport search">✕</button>
+    </div>
+    <div class="ap-dropdown" id="ap-dropdown" role="listbox" aria-label="Airport search results"></div>
+  </div>
+  <div class="ap-quick-row">
+    <span class="ap-quick-label" aria-hidden="true">Quick:</span>
+    <div class="chip on" onclick="selAPCode('LAX')" role="button" tabindex="0" aria-label="Select LAX airport">LAX</div>
+    <div class="chip" onclick="selAPCode('JFK')" role="button" tabindex="0" aria-label="Select JFK airport">JFK</div>
+    <div class="chip" onclick="selAPCode('ORD')" role="button" tabindex="0" aria-label="Select ORD airport">ORD</div>
+    <div class="chip" onclick="selAPCode('ATL')" role="button" tabindex="0" aria-label="Select ATL airport">ATL</div>
+    <div class="chip" onclick="selAPCode('DFW')" role="button" tabindex="0" aria-label="Select DFW airport">DFW</div>
+    <div class="chip" onclick="selAPCode('SFO')" role="button" tabindex="0" aria-label="Select SFO airport">SFO</div>
+    <div class="chip" onclick="selAPCode('IAD')" role="button" tabindex="0" aria-label="Select IAD airport">IAD</div>
+    <div class="chip" onclick="selAPCode('LHR')" role="button" tabindex="0" aria-label="Select LHR airport">LHR</div>
+    <div class="chip" onclick="selAPCode('AMS')" role="button" tabindex="0" aria-label="Select AMS airport">AMS</div>
+    <div class="chip" onclick="selAPCode('SIN')" role="button" tabindex="0" aria-label="Select SIN airport">SIN</div>
+    <div class="chip" onclick="selAPCode('DXB')" role="button" tabindex="0" aria-label="Select DXB airport">DXB</div>
+    <div class="chip" onclick="selAPCode('NRT')" role="button" tabindex="0" aria-label="Select NRT airport">NRT</div>
+    <div class="chip" onclick="selAPCode('CDG')" role="button" tabindex="0" aria-label="Select CDG airport">CDG</div>
+    <div class="chip" onclick="selAPCode('DOH')" role="button" tabindex="0" aria-label="Select DOH airport">DOH</div>
+  </div>
+</div>
+<div class="ap-name-bar" id="ap-name-bar" style="display:flex;align-items:center;justify-content:space-between;padding:6px 18px">
+  <span id="ap-name-text" style="color:var(--muted);font-family:var(--font-mono);font-size:10px">—</span>
+  <button id="fav-star-btn" type="button" onclick="if(window.toggleFavoriteAirport)toggleFavoriteAirport(cur)" style="background:none;border:none;cursor:pointer;font-size:18px;line-height:1;color:var(--muted2);padding:0 2px;transition:color .2s" title="Save airport" aria-label="Toggle favorite airport">☆</button>
+</div>
+
+<!-- GEO BANNER -->
+<div class="geo-banner" id="geo-banner" role="status" aria-live="polite">
+  <span class="geo-banner-icon">📍</span>
+  <span>Nearest airport: <span class="geo-banner-airport" id="geo-airport-label">—</span></span>
+  <button class="geo-banner-dismiss" type="button" onclick="document.getElementById('geo-banner').classList.remove('show')" aria-label="Dismiss">✕</button>
+</div>
+
+<!-- INSTALL BANNER -->
+<div class="install-banner" id="install-banner" role="banner" aria-live="polite">
+  <div class="ib-left">
+    <div class="ib-icon" id="ib-icon">📲</div>
+    <div>
+      <div class="ib-text" id="ib-text">Install AeroIQ</div>
+      <div class="ib-sub" id="ib-sub">Add to Home Screen for the full app experience</div>
+    </div>
+  </div>
+  <button class="ib-btn" id="ib-btn" type="button" onclick="promptInstallApp()">Install</button>
+  <button class="ib-dismiss" type="button" onclick="dismissInstallBanner()" aria-label="Dismiss install prompt">✕</button>
+</div>
+
+<!-- PAGES -->
+<div id="page-home" class="page active">
+<div class="main" id="main-content" role="main">
+
+  
+
+    <!-- WEATHER -->
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="ci ci-b">🌤</div>Weather</div><span class="badge b-live">LIVE</span></div>
+    <div id="wx" aria-live="polite"><div class="loader"><span class="spin-anim">↻</span> Loading weather…</div></div>
+  </div>
+
+  <!-- LIVE AIRCRAFT -->
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="ci ci-p">📡</div>Aircraft Overhead</div><span class="badge b-live">ADS-B LIVE</span></div>
+    <div id="planes" aria-live="polite"><div class="loader"><span class="spin-anim">↻</span> Scanning airspace…</div></div>
+  </div>
+
+  <!-- TSA -->
+  <div class="card">
+    <div class="ch">
+      <div class="ct"><div class="ci ci-o">🛡</div>TSA Wait Times</div>
+      <span class="badge b-crowd">CROWDSOURCED</span>
+    </div>
+    <div class="tsa-grid" id="tsa-content" aria-live="polite"></div>
+    <div class="feed-wrap">
+      <div class="feed-label">Recent reports</div>
+      <div id="tsa-feed"></div>
+    </div>
+  <div class="share-row">
+    <button class="share-btn" type="button" onclick="shareWaitTimes('tsa')" aria-label="Share TSA wait times">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+      Share wait times
+    </button>
+  </div>
+  </div>
+
+  <!-- FLIGHTS -->
+  <div class="card">
+    <div class="ch">
+      <div class="ct"><div class="ci ci-g">✈️</div>Flights</div>
+      <div class="fl-tabs">
+        <button class="tab" onclick="setFTab('dep',this)">DEP</button>
+        <button class="tab on" onclick="setFTab('arr',this)">ARR</button>
+      </div>
+    </div>
+    <div class="fl-list" id="fl-list" aria-live="polite"><div class="loader"><span class="spin-anim">↻</span> Loading…</div></div>
+  </div>
+
+  <!-- PARKING -->
+  <div class="card">
+    <div class="ch">
+      <div class="ct"><div class="ci ci-g">🅿️</div>Parking</div>
+      <span class="badge b-crowd">CROWDSOURCED</span>
+    </div>
+    <div id="parking-content" aria-live="polite"></div>
+    <div class="feed-wrap">
+      <div class="feed-label">Recent reports</div>
+      <div id="parking-feed"></div>
+    </div>
+  </div>
+
+  <!-- CONGESTION -->
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="ci ci-y">📍</div>Terminal Congestion</div><span class="badge b-est">ESTIMATED</span></div>
+    <div class="cong-grid" id="cong-content" aria-live="polite"></div>
+    <div class="insight" style="margin-top:12px">
+      <div class="insight-icon">🤖</div>
+      <div class="insight-text" id="cong-insight">—</div>
+    </div>
+  </div>
+
+  <!-- SERVICES -->
+  <div class="card full">
+    <div class="ch">
+      <div class="ct"><div class="ci ci-o">⚡</div>Food Lines &amp; Rideshare</div>
+      <span class="badge b-crowd">CROWDSOURCED</span>
+    </div>
+    <div class="svc-grid">
+      <div class="svc-sec">
+        <div class="sec-lbl">🍽 Food Lines</div>
+        <div id="food-content" aria-live="polite"></div>
+      </div>
+      <div class="svc-sec">
+        <div class="sec-lbl">🚗 Rideshare &amp; Transport</div>
+        <div id="ride-content" aria-live="polite"></div>
+      </div>
+    </div>
+    <div class="feed-wrap" style="margin-top:14px">
+      <div class="feed-label">Recent service reports</div>
+      <div id="svc-feed"></div>
+    </div>
+  </div>
+
+  <!-- BUSYNESS -->
+  <div class="card full">
+    <div class="ch">
+      <div class="ct"><div class="ci ci-p">📊</div>Predicted Busyness — Today</div>
+      <span class="badge b-est" id="time-lbl"></span>
+    </div>
+    <div class="chart-wrap" id="busyness-chart" aria-live="polite"></div>
+    <div class="insight">
+      <div class="insight-icon">💡</div>
+      <div class="insight-text" id="busy-insight">—</div>
+    </div>
+  </div>
+
+</div>
+</div><!-- end page-home -->
+
+<!-- PLANNER PAGE -->
+<div id="page-planner" class="page">
+  <div style="padding:0 16px 16px">
+
+    <div style="padding:18px 0 10px">
+      <div style="font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--accent);margin-bottom:4px">Departure Planner</div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Calculates your ideal leave-home time using live TSA waits &amp; airport congestion</div>
+    </div>
+
+    <div class="card full" style="margin-bottom:10px">
+      <div class="ch"><div class="ct"><div class="ci ci-p">✈️</div>Flight Details</div></div>
+      <div class="planner-inputs" style="grid-template-columns:1fr 1fr">
+        <div class="p-field">
+          <label class="p-label" for="p-flight-num">Flight Number</label>
+          <input class="p-input" type="text" id="p-flight-num" placeholder="e.g. AA1234" autocomplete="off" style="text-transform:uppercase">
+        </div>
+        <div class="p-field">
+          <label class="p-label" for="p-flight-time">Departure Time</label>
+          <input class="p-input" type="time" id="p-flight-time" value="14:00">
+        </div>
+        <div class="p-field">
+          <label class="p-label" for="p-flight-date">Date</label>
+          <input class="p-input" type="date" id="p-flight-date">
+        </div>
+        <div class="p-field">
+          <label class="p-label" for="p-terminal">Terminal</label>
+          <select class="p-input" id="p-terminal"></select>
+        </div>
+        <div class="p-field">
+          <label class="p-label" for="p-destination">Destination</label>
+          <input class="p-input" type="text" id="p-destination" placeholder="e.g. New York" autocomplete="off">
+        </div>
+        <div class="p-field">
+          <label class="p-label" for="p-airline">Airline</label>
+          <input class="p-input" type="text" id="p-airline" placeholder="e.g. Delta" autocomplete="off">
+        </div>
+      </div>
+    </div>
+
+    <div class="card full" style="margin-bottom:10px">
+      <div class="ch"><div class="ct"><div class="ci ci-b">🚗</div>Getting There</div></div>
+      <div class="planner-inputs" style="grid-template-columns:1fr 1fr">
+        <div class="p-field">
+          <label class="p-label" for="p-drive">Drive Time (min)</label>
+          <input class="p-input" type="number" id="p-drive" value="30" min="1" max="180">
+        </div>
+        <div class="p-field">
+          <label class="p-label" for="p-transport">Transport Mode</label>
+          <select class="p-input" id="p-transport">
+            <option value="drive">Driving + Parking</option>
+            <option value="rideshare">Uber / Lyft</option>
+            <option value="transit">Public Transit</option>
+            <option value="dropoff">Drop-off</option>
+          </select>
+        </div>
+        <div class="p-field">
+          <label class="p-label" for="p-bags">Checked Bags</label>
+          <select class="p-input" id="p-bags">
+            <option value="0">No bags — carry-on only</option>
+            <option value="1">1 checked bag</option>
+            <option value="2">2+ checked bags</option>
+          </select>
+        </div>
+        <div class="p-field">
+          <label class="p-label" for="p-tsa">Security Type</label>
+          <select class="p-input" id="p-tsa">
+            <option value="standard">Standard</option>
+            <option value="precheck">TSA PreCheck</option>
+            <option value="clear">CLEAR + PreCheck</option>
+          </select>
+        </div>
+        <div class="p-field">
+          <label class="p-label" for="p-travelers">Travelers</label>
+          <select class="p-input" id="p-travelers">
+            <option value="1">Just me</option>
+            <option value="2">2 travelers</option>
+            <option value="3">3–4 travelers</option>
+            <option value="5">5+ / family</option>
+          </select>
+        </div>
+        <div class="p-field">
+          <label class="p-label" for="p-mobility">Accessibility</label>
+          <select class="p-input" id="p-mobility">
+            <option value="none">None needed</option>
+            <option value="wheelchair">Wheelchair assist</option>
+            <option value="extra">Extra time needed</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card full" style="margin-bottom:14px">
+      <div class="ch"><div class="ct"><div class="ci ci-g">⚙️</div>Preferences</div></div>
+      <div class="planner-inputs" style="grid-template-columns:1fr 1fr">
+        <div class="p-field">
+          <label class="p-label" for="p-comfort">Buffer Preference</label>
+          <select class="p-input" id="p-comfort">
+            <option value="relaxed">Relaxed — I like extra time</option>
+            <option value="normal" selected>Normal</option>
+            <option value="tight">Tight — I cut it close</option>
+          </select>
+        </div>
+        <div class="p-field">
+          <label class="p-label" for="p-lounge">Airport Lounge</label>
+          <select class="p-input" id="p-lounge">
+            <option value="no">No lounge</option>
+            <option value="yes">Add lounge time</option>
+          </select>
+        </div>
+      </div>
+      <button class="p-btn" type="button" onclick="calculateDeparture()" style="width:100%;margin-top:8px;font-size:14px;padding:13px">⚡ Calculate My Departure</button>
+    </div>
+
+    <div id="planner-result" style="display:none">
+      <div class="card full" style="margin-bottom:10px">
+        <div class="ch"><div class="ct"><div class="ci ci-g">🕐</div>Your Journey</div><span class="badge b-ai">LIVE CALC</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Timeline</div>
+            <div class="timeline" id="p-timeline"></div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Departure Windows</div>
+            <div class="window-grid" id="p-windows" style="grid-template-columns:1fr;gap:6px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card full" style="margin-bottom:10px">
+        <div class="ch"><div class="ct"><div class="ci ci-o">⚠️</div>Risk Factors</div></div>
+        <div id="p-risks"></div>
+      </div>
+      <div class="planner-refresh" style="padding:0 2px 10px">
+        <div class="pr-dot"></div> Recalculating every 60 seconds
+        <span id="p-last-calc" style="margin-left:auto"></span>
+      </div>
+      <button onclick="sharePlannerResult()" style="width:100%;padding:12px;background:var(--surface2);color:var(--accent);border:1px solid rgba(0,229,255,.2);border-radius:10px;font-family:var(--font-display);font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+        Share My Plan
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- FAVORITES PAGE -->
+<div id="page-favorites" class="page">
+  <div style="padding:0 16px 16px">
+    <div class="fav-hero">
+      <div class="fav-title">Saved Airports</div>
+      <div class="fav-sub">Your favorites and recently viewed</div>
+    </div>
+    <div class="fav-list" id="fav-list"></div>
+    <div class="recents-section">
+      <div class="section-heading">Recently Viewed</div>
+      <div class="recents-grid" id="recents-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS PAGE -->
+<div id="page-settings" class="page">
+  <div style="padding:0 16px 16px">
+    <div class="fav-hero">
+      <div class="fav-title">Settings</div>
+      <div class="fav-sub">Preferences and notifications</div>
+    </div>
+    <div class="settings-list">
+      <div class="setting-row">
+        <div class="setting-l">
+          <div class="setting-title">Departure Notifications</div>
+          <div class="setting-desc">Get alerted when it's time to leave for your flight</div>
+        </div>
+        <button class="toggle" id="notif-toggle" type="button" onclick="toggleNotifications()" aria-label="Toggle notifications"></button>
+      </div>
+      <div class="setting-row">
+        <div class="setting-l">
+          <div class="setting-title">Speed Unit</div>
+          <div class="setting-desc">Aircraft speed display in overhead tracker</div>
+        </div>
+        <button class="setting-btn" type="button" onclick="cycleSpeedUnit()" id="settings-unit-btn">kt → mph → km/h</button>
+      </div>
+      <div class="setting-row" id="install-setting-row">
+        <div class="setting-l">
+          <div class="setting-title">Install App</div>
+          <div class="setting-desc">Add AeroIQ to your home screen for offline access</div>
+        </div>
+        <button class="setting-btn" type="button" onclick="promptInstallApp()" id="settings-install-btn">Install</button>
+      </div>
+      <div class="setting-row">
+        <div class="setting-l">
+          <div class="setting-title">Clear Saved Data</div>
+          <div class="setting-desc">Remove favorites, history, and cached reports</div>
+        </div>
+        <button class="setting-btn danger" type="button" onclick="clearAllData()">Clear</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav" aria-label="Main navigation">
+  <button class="nav-item active" id="nav-home" onclick="switchPage('home')" type="button" aria-label="Home — Live Dashboard">
+    <span class="nav-icon">📡</span>
+    <span class="nav-label">Live</span>
+  </button>
+  <button class="nav-item" id="nav-planner" onclick="switchPage('planner')" type="button" aria-label="Departure Planner">
+    <span class="nav-icon">🧭</span>
+    <span class="nav-label">Planner</span>
+  </button>
+  <button class="nav-item" id="nav-favorites" onclick="switchPage('favorites')" type="button" aria-label="Saved Airports">
+    <span class="nav-icon">⭐</span>
+    <span class="nav-label">Saved</span>
+  </button>
+  <button class="nav-item" id="nav-settings" onclick="switchPage('settings')" type="button" aria-label="Settings">
+    <span class="nav-icon">⚙️</span>
+    <span class="nav-label">Settings</span>
+  </button>
+</nav>
+
+<script>
+// ══════════════════════════════════════
+// AIRPORT DATA
+// ══════════════════════════════════════
+const APS = {
+  LAX:{name:'Los Angeles International',icao:'KLAX',lat:33.9425,lon:-118.408,city:'Los Angeles',timezone:'America/Los_Angeles',
+    terminals:['1','2','3','4','5','6','7','8','B'],
+    terminalWalkMin:{1:5,2:5,3:8,4:8,5:10,6:12,7:12,8:10,B:15},
+    tsa:[{n:'T1/T2 — N Gate'},{n:'T3/T4 — Central'},{n:'TBIT — Intl'},{n:'T6/T7 — S Gate'}],
+    parking:[{n:'Lot A — Short Term',d:'T1/T2, 5min walk',tot:800,pr:'$40/day',walkMin:5},{n:'Lot B — Economy',d:'Shuttle 8min',tot:2200,pr:'$14/day',walkMin:12},{n:'Lot C — Hourly',d:'T6/T7, 3min',tot:400,pr:'$6/hr',walkMin:6}],
+    food:[{n:'In-N-Out Burger',loc:'T4 Gate 42A',e:'🍔'},{n:'Urth Caffé',loc:'TBIT Gate 101',e:'☕'},{n:'Shake Shack',loc:'T7 Gate 73',e:'🍔'},{n:'Panda Express',loc:'T3 Gate 34',e:'🥡'}],
+    ride:[{n:'Uber / Lyft',loc:'LAX-it Lot Level P',e:'🚙'},{n:'Taxi',loc:'Lower Arrivals Roadway',e:'🚕'},{n:'FlyAway Bus',loc:'Terminal 8',e:'🚌'}],
+    busy:[15,12,10,8,11,22,45,70,82,80,74,68,74,80,78,74,80,86,78,64,50,36,26,18],
+    parkingWalkMin:10,checkinCounters:true,intlTerminals:['B']},
+  JFK:{name:'John F. Kennedy International',icao:'KJFK',lat:40.6413,lon:-73.7781,city:'New York',timezone:'America/New_York',
+    terminals:['1','2','4','5','7','8'],
+    terminalWalkMin:{1:10,2:8,4:12,5:10,7:10,8:12},
+    tsa:[{n:'T1 — Intl'},{n:'T4 — Main Hall'},{n:'T5 — JetBlue'},{n:'T8 — American'}],
+    parking:[{n:'Garage 1 — T4',d:'T4 attached',tot:1100,pr:'$45/day',walkMin:4},{n:'Lot 9 — Economy',d:'Free AirTrain',tot:3000,pr:'$18/day',walkMin:15},{n:'Garage 2 — T5',d:'JetBlue terminal',tot:600,pr:'$38/day',walkMin:5}],
+    food:[{n:'Shake Shack',loc:'T4 Gate B36',e:'🍔'},{n:'Joe Coffee',loc:'T5 Main Hall',e:'☕'},{n:"Balducci's",loc:'T8 Gate 1',e:'🥪'},{n:'Cibo Express',loc:'T1 Gate 6',e:'🛒'}],
+    ride:[{n:'Uber / Lyft',loc:'T4 AirTrain Level',e:'🚙'},{n:'NYC Yellow Cab',loc:'Arrivals roadway',e:'🚕'},{n:'AirTrain',loc:'All terminals',e:'🚆'}],
+    busy:[18,14,11,9,13,26,50,74,85,84,78,72,74,80,84,80,86,90,82,68,54,40,30,20],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['1','4']},
+  ORD:{name:"O'Hare International",icao:'KORD',lat:41.9742,lon:-87.9073,city:'Chicago',timezone:'America/Chicago',
+    terminals:['1','2','3','5'],
+    terminalWalkMin:{1:8,2:8,3:10,5:15},
+    tsa:[{n:'T1 — B/C Gates'},{n:'T2 — E/F Gates'},{n:'T3 — G/H/K'},{n:'T5 — Intl'}],
+    parking:[{n:'Garage A — T1',d:'T1/T2 direct',tot:900,pr:'$39/day',walkMin:5},{n:'Economy Lot E',d:'Shuttle avail',tot:2800,pr:'$22/day',walkMin:18},{n:'Garage F — T3',d:'T3 connected',tot:700,pr:'$35/day',walkMin:6}],
+    food:[{n:"O'Brien's",loc:'T1 Gate B6',e:'🍺'},{n:'Rick Bayless Tortas',loc:'T1 Gate B18',e:'🌮'},{n:'Wicker Park Seafood',loc:'T3 Gate H1',e:'🦞'},{n:'Starbucks',loc:'T2 Gate E2',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Lower Arrivals Door 5',e:'🚙'},{n:'Yellow Cab',loc:'Lower Arrivals Door 3',e:'🚕'},{n:'CTA Blue Line',loc:'T2 B Concourse',e:'🚆'}],
+    busy:[16,13,10,9,14,28,56,76,82,80,72,66,70,76,80,76,82,86,80,66,50,36,26,17],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['5']},
+  ATL:{name:'Hartsfield-Jackson Atlanta Intl',icao:'KATL',lat:33.6407,lon:-84.4277,city:'Atlanta',timezone:'America/New_York',
+    terminals:['S','N','A','B','C','D','E','F'],
+    terminalWalkMin:{S:5,N:5,A:8,B:10,C:12,D:14,E:16,F:20},
+    tsa:[{n:'N Terminal — TSA'},{n:'S Terminal — TSA'},{n:'Concourse A/B'},{n:'Intl Concourse F'}],
+    parking:[{n:'Daily N',d:'N Terminal direct',tot:1200,pr:'$32/day',walkMin:4},{n:'Economy Lot',d:'Plane Train shuttle',tot:4000,pr:'$12/day',walkMin:20},{n:'Daily S',d:'S Terminal direct',tot:1000,pr:'$32/day',walkMin:4}],
+    food:[{n:'One Flew South',loc:'Concourse E',e:'🍷'},{n:"Paschal's",loc:'Concourse B',e:'🍗'},{n:'Atlanta Bread Co',loc:'Concourse A',e:'🥐'},{n:'Starbucks',loc:'S Terminal',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Domestic: Door D; Intl: Arrivals',e:'🚙'},{n:'MARTA',loc:'S Terminal Station',e:'🚆'},{n:'Atlanta Cab',loc:'Arrivals curb',e:'🚕'}],
+    busy:[14,11,9,7,10,20,42,68,78,80,76,72,76,82,80,76,80,84,76,62,46,34,24,16],
+    parkingWalkMin:10,checkinCounters:true,intlTerminals:['F']},
+  DFW:{name:'Dallas/Fort Worth International',icao:'KDFW',lat:32.8998,lon:-97.0403,city:'Dallas',timezone:'America/Chicago',
+    terminals:['A','B','C','D','E'],
+    terminalWalkMin:{A:8,B:10,C:12,D:15,E:10},
+    tsa:[{n:'Terminal A — North'},{n:'Terminal C — Central'},{n:'Terminal D — Intl'},{n:'Terminal E — South'}],
+    parking:[{n:'Terminal A Garage',d:'T-A connected',tot:800,pr:'$28/day',walkMin:4},{n:'Remote South',d:'Skylink shuttle',tot:3500,pr:'$10/day',walkMin:18},{n:'Terminal D Garage',d:'T-D connected',tot:700,pr:'$28/day',walkMin:4}],
+    food:[{n:'Pappadeaux Seafood',loc:'Terminal D Gate D22',e:'🦞'},{n:'Love Shack',loc:'Terminal A Gate A24',e:'🍔'},{n:"Dickey's BBQ",loc:'Terminal C Gate C17',e:'🥩'},{n:'Starbucks',loc:'Terminal B Gate B6',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Terminal A–E arrival lanes',e:'🚙'},{n:'DART Rail',loc:'Terminal A Station',e:'🚆'},{n:'Yellow Cab',loc:'Arrivals curb',e:'🚕'}],
+    busy:[14,11,9,8,12,24,50,72,80,78,72,68,72,78,80,76,82,86,78,64,48,34,24,16],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['D']},
+  SFO:{name:'San Francisco International',icao:'KSFO',lat:37.6213,lon:-122.379,city:'San Francisco',timezone:'America/Los_Angeles',
+    terminals:['1','2','3','I'],
+    terminalWalkMin:{1:8,2:10,3:12,I:15},
+    tsa:[{n:'T1 — B Gates'},{n:'T2 — D Gates'},{n:'T3 — E/F Gates'},{n:'Intl — A/G Gates'}],
+    parking:[{n:'Garage A — T1/2',d:'T1 & T2 direct',tot:900,pr:'$42/day',walkMin:5},{n:'Long-Term A',d:'AirTrain 5min',tot:2200,pr:'$26/day',walkMin:14},{n:'Garage G — Intl',d:'Intl Terminal direct',tot:700,pr:'$42/day',walkMin:5}],
+    food:[{n:'Napa Farms Market',loc:'T2 Gate D30',e:'🍷'},{n:'MJLK',loc:'T3 Gate F4',e:'🥛'},{n:'Boudin Bakery',loc:'T1 Gate B6',e:'🥐'},{n:"Peet's Coffee",loc:'Intl A Gate A2',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Domestic: Arrivals; Intl: Lvl 5',e:'🚙'},{n:'BART',loc:'Airport Station (SkyTrain)',e:'🚆'},{n:'SFO Taxi',loc:'Arrivals median',e:'🚕'}],
+    busy:[15,12,9,8,12,25,50,74,82,80,74,68,72,78,80,76,80,84,76,62,48,34,26,17],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['I']},
+  MIA:{name:'Miami International',icao:'KMIA',lat:25.7959,lon:-80.287,city:'Miami',timezone:'America/New_York',
+    terminals:['N','S','E','J'],
+    terminalWalkMin:{N:8,S:8,E:10,J:15},
+    tsa:[{n:'North Terminal'},{n:'Central Terminal'},{n:'South Terminal'},{n:'Intl — J'}],
+    parking:[{n:'Dolphin Garage — N',d:'North Terminal',tot:750,pr:'$36/day',walkMin:5},{n:'Blue Garage — S',d:'South Terminal',tot:900,pr:'$36/day',walkMin:5},{n:'Economy',d:'MIA Mover shuttle',tot:2500,pr:'$15/day',walkMin:15}],
+    food:[{n:'La Carreta',loc:'North Terminal',e:'🫔'},{n:"Enriqueta's",loc:'Central',e:'☕'},{n:'Salty Donut',loc:'South Terminal',e:'🍩'},{n:'Cerveceria',loc:'Gate J',e:'🍺'}],
+    ride:[{n:'Uber / Lyft',loc:'MIA Mover to pick-up',e:'🚙'},{n:'Miami Cab',loc:'Arrivals curb',e:'🚕'},{n:'Metrorail',loc:'MIA Station',e:'🚆'}],
+    busy:[14,11,9,7,11,22,45,70,80,82,78,74,78,82,80,76,80,84,76,62,48,34,24,15],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['J']},
+  SEA:{name:'Seattle-Tacoma International',icao:'KSEA',lat:47.4502,lon:-122.3088,city:'Seattle',timezone:'America/Los_Angeles',
+    terminals:['N','S','C','D'],
+    terminalWalkMin:{N:8,S:8,C:12,D:15},
+    tsa:[{n:'Main Checkpoint'},{n:'North Checkpoint'},{n:'South Checkpoint'},{n:'Pre-Check Lane'}],
+    parking:[{n:'Garage A',d:'Main terminal',tot:800,pr:'$42/day',walkMin:5},{n:'Economy Lot',d:'Shuttle 10min',tot:2500,pr:'$24/day',walkMin:18},{n:'Cell Phone Lot',d:'Free, 2hr max',tot:200,pr:'Free',walkMin:8}],
+    food:[{n:"Beecher's Cheese",loc:'Central Terminal',e:'🧀'},{n:"Ivar's Seafood",loc:'N Concourse',e:'🐟'},{n:'Starbucks',loc:'S Concourse',e:'☕'},{n:"Dick's Drive-In",loc:'N Terminal',e:'🍔'}],
+    ride:[{n:'Uber / Lyft',loc:'Level 3 Arrivals Curb',e:'🚙'},{n:'Link Light Rail',loc:'Station under Terminal',e:'🚆'},{n:'Yellow Cab',loc:'Arrivals median',e:'🚕'}],
+    busy:[14,11,9,7,10,20,42,66,78,80,76,70,72,78,80,76,80,84,76,60,46,32,22,15],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['S']},
+
+  /* ── US MAJOR ── */
+  BOS:{name:'Boston Logan International',icao:'KBOS',lat:42.3656,lon:-71.0096,city:'Boston',timezone:'America/New_York',
+    terminals:['A','B','C','E'],
+    terminalWalkMin:{A:7,B:8,C:10,E:14},
+    tsa:[{n:'Terminal A — Delta'},{n:'Terminal B — American'},{n:'Terminal C — JetBlue'},{n:'Terminal E — Intl'}],
+    parking:[{n:'Central Garage',d:'Terminals A/B/C',tot:2000,pr:'$42/day',walkMin:6},{n:'Economy Lot E',d:'Free shuttle',tot:2800,pr:'$22/day',walkMin:16},{n:'Terminal E Garage',d:'Intl Terminal',tot:500,pr:'$38/day',walkMin:5}],
+    food:[{n:'Legal Sea Foods',loc:'Terminal C Gate C19',e:'🦞'},{n:'Dunkin',loc:'Terminal B',e:'☕'},{n:'Wahlburgers',loc:'Terminal C',e:'🍔'},{n:'Parish Café',loc:'Terminal E',e:'🥪'}],
+    ride:[{n:'Uber / Lyft',loc:'Arrivals Level — all terminals',e:'🚙'},{n:'Silver Line Bus',loc:'Terminal E lower',e:'🚌'},{n:'Boston Cab',loc:'Arrivals curb',e:'🚕'}],
+    busy:[13,10,8,7,9,20,42,68,80,82,76,70,74,80,80,76,78,82,74,60,46,32,22,15],
+    parkingWalkMin:7,checkinCounters:true,intlTerminals:['E']},
+
+  DEN:{name:'Denver International',icao:'KDEN',lat:39.8561,lon:-104.6737,city:'Denver',timezone:'America/Denver',
+    terminals:['A','B','C'],
+    terminalWalkMin:{A:10,B:12,C:14},
+    tsa:[{n:'Main Security — Level 6'},{n:'East Security'},{n:'West Security'},{n:'PreCheck Lane'}],
+    parking:[{n:'Pikes Peak Garage',d:'Main terminal',tot:1200,pr:'$38/day',walkMin:5},{n:'Mt Elbert Economy',d:'Free shuttle',tot:3000,pr:'$14/day',walkMin:20},{n:'Frontline Parking',d:'Terminal walkway',tot:800,pr:'$32/day',walkMin:8}],
+    food:[{n:'Root Down DIA',loc:'Concourse C',e:'🌱'},{n:'Modern Market',loc:'Concourse B',e:'🥗'},{n:'Elway\'s',loc:'Concourse B',e:'🥩'},{n:'Starbucks',loc:'Main Terminal',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Level 1 Island 1',e:'🚙'},{n:'RTD A-Line Rail',loc:'Main Terminal Station',e:'🚆'},{n:'Yellow Cab',loc:'Arrivals island',e:'🚕'}],
+    busy:[12,10,8,7,10,22,46,72,82,80,74,68,72,78,80,78,82,86,78,62,48,34,24,14],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:[]},
+
+  LAS:{name:'Harry Reid International',icao:'KLAS',lat:36.0840,lon:-115.1537,city:'Las Vegas',timezone:'America/Los_Angeles',
+    terminals:['1','3'],
+    terminalWalkMin:{1:8,3:10},
+    tsa:[{n:'Terminal 1 — Main'},{n:'Terminal 1 — Gates C'},{n:'Terminal 3 — Gates D/E'},{n:'T3 PreCheck'}],
+    parking:[{n:'T1 Garage',d:'Terminal 1 direct',tot:900,pr:'$12/day',walkMin:4},{n:'T3 Garage',d:'Terminal 3 direct',tot:1100,pr:'$12/day',walkMin:4},{n:'Economy Lot',d:'Free shuttle',tot:4000,pr:'$7/day',walkMin:18}],
+    food:[{n:'Gordon Ramsay Fish & Chips',loc:'T3 Gate E',e:'🐟'},{n:'In-N-Out Burger',loc:'T1 Gate B',e:'🍔'},{n:'Secret Pizza',loc:'T3 Level 3',e:'🍕'},{n:'Starbucks',loc:'T1 Gate C',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'T1: Door 8; T3: Level 0',e:'🚙'},{n:'Yellow Cab',loc:'Arrivals island',e:'🚕'},{n:'RTC Bus',loc:'Terminal 1',e:'🚌'}],
+    busy:[22,18,15,12,16,28,52,74,78,74,70,72,76,80,78,76,80,84,80,70,62,50,40,30],
+    parkingWalkMin:6,checkinCounters:true,intlTerminals:[]},
+
+  PHX:{name:'Phoenix Sky Harbor International',icao:'KPHX',lat:33.4373,lon:-112.0078,city:'Phoenix',timezone:'America/Phoenix',
+    terminals:['2','3','4'],
+    terminalWalkMin:{2:8,3:10,4:12},
+    tsa:[{n:'Terminal 2 — Southwest'},{n:'Terminal 3 — American'},{n:'Terminal 4 — Main'},{n:'T4 PreCheck'}],
+    parking:[{n:'East Economy',d:'PHX Sky Train',tot:3500,pr:'$10/day',walkMin:14},{n:'Terminal 3 Garage',d:'T3 direct',tot:700,pr:'$30/day',walkMin:4},{n:'Terminal 4 Garage',d:'T4 direct',tot:900,pr:'$30/day',walkMin:4}],
+    food:[{n:'Phoenix Ale Brewery',loc:'T4 Gate A',e:'🍺'},{n:'Blanco Tacos',loc:'T4 Gate D',e:'🌮'},{n:'SkyBar',loc:'T4 Gate B20',e:'🍸'},{n:'Starbucks',loc:'T3',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'T3 & T4 Level 1',e:'🚙'},{n:'Valley Metro Rail',loc:'44th St/Washington',e:'🚆'},{n:'Yellow Cab',loc:'Arrivals level',e:'🚕'}],
+    busy:[13,10,8,7,10,22,46,70,80,78,72,68,72,76,78,76,80,84,76,60,46,32,24,16],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:[]},
+
+  MCO:{name:'Orlando International',icao:'KMCO',lat:28.4312,lon:-81.3081,city:'Orlando',timezone:'America/New_York',
+    terminals:['A','B','C','International'],
+    terminalWalkMin:{A:10,B:10,C:12,International:16},
+    tsa:[{n:'Terminal A — North'},{n:'Terminal B — South'},{n:'Terminal C'},{n:'Intl — Gates 100+'}],
+    parking:[{n:'Parking Garage A',d:'Terminal A/B',tot:1200,pr:'$18/day',walkMin:6},{n:'Parking Garage B',d:'Terminal B',tot:1100,pr:'$18/day',walkMin:5},{n:'Economy Lot',d:'Shuttle 12min',tot:6000,pr:'$10/day',walkMin:18}],
+    food:[{n:'The Toothsome Chocolate Emporium',loc:'Terminal B',e:'🍫'},{n:'Emeril\'s',loc:'Airside 2',e:'🍷'},{n:'Earl of Sandwich',loc:'Airside 4',e:'🥪'},{n:'Starbucks',loc:'Terminal A',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Level 1 Ground Transportation',e:'🚙'},{n:'Mears Shuttle',loc:'Level 1 Curb',e:'🚌'},{n:'Yellow Cab',loc:'Arrivals curb',e:'🚕'}],
+    busy:[14,11,9,7,10,22,46,70,82,82,78,74,78,84,82,78,82,86,78,64,50,36,26,17],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['International']},
+
+  IAH:{name:'George Bush Intercontinental',icao:'KIAH',lat:29.9902,lon:-95.3368,city:'Houston',timezone:'America/Chicago',
+    terminals:['A','B','C','D','E'],
+    terminalWalkMin:{A:8,B:10,C:12,D:14,E:16},
+    tsa:[{n:'Terminal A'},{n:'Terminal B/C'},{n:'Terminal D — United Hub'},{n:'Terminal E — Intl'}],
+    parking:[{n:'Terminal A Garage',d:'T-A direct',tot:800,pr:'$26/day',walkMin:4},{n:'Economy A',d:'Shuttle 10min',tot:3500,pr:'$12/day',walkMin:16},{n:'Terminal D Garage',d:'T-D direct',tot:1000,pr:'$26/day',walkMin:5}],
+    food:[{n:'Pappasito\'s Cantina',loc:'Terminal E',e:'🌮'},{n:'Hubcap Grill',loc:'Terminal D',e:'🍔'},{n:'Houston\'s',loc:'Terminal C',e:'🥩'},{n:'Starbucks',loc:'Terminal B',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Lower Level — all terminals',e:'🚙'},{n:'Metro Bus 102',loc:'Terminal A',e:'🚌'},{n:'Yellow Cab',loc:'Arrivals island',e:'🚕'}],
+    busy:[14,11,9,8,12,24,48,72,80,78,72,68,72,78,80,76,80,84,76,62,48,34,24,16],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['E']},
+
+  EWR:{name:'Newark Liberty International',icao:'KEWR',lat:40.6895,lon:-74.1745,city:'Newark',timezone:'America/New_York',
+    terminals:['A','B','C'],
+    terminalWalkMin:{A:8,B:10,C:12},
+    tsa:[{n:'Terminal A — United'},{n:'Terminal B — Intl'},{n:'Terminal C — United Hub'},{n:'T-C PreCheck'}],
+    parking:[{n:'Terminal A Garage',d:'T-A direct',tot:700,pr:'$39/day',walkMin:4},{n:'Terminal C Garage',d:'T-C direct',tot:900,pr:'$39/day',walkMin:4},{n:'Economy P4',d:'AirTrain 8min',tot:2500,pr:'$18/day',walkMin:16}],
+    food:[{n:'Saison',loc:'Terminal C Gate 120',e:'🍷'},{n:'Two Boots Pizza',loc:'Terminal C Gate 75',e:'🍕'},{n:'Cultura',loc:'Terminal B',e:'🥗'},{n:'Dunkin',loc:'Terminal A',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Terminal B Level 1',e:'🚙'},{n:'NJ Transit/Amtrak',loc:'AirTrain → Newark Penn',e:'🚆'},{n:'Yellow Cab',loc:'Arrivals curb',e:'🚕'}],
+    busy:[15,12,10,8,12,24,50,74,84,82,76,70,74,80,82,78,84,88,80,66,52,38,28,18],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['B']},
+
+  CLT:{name:'Charlotte Douglas International',icao:'KCLT',lat:35.2140,lon:-80.9431,city:'Charlotte',timezone:'America/New_York',
+    terminals:['Main'],
+    terminalWalkMin:{Main:10},
+    tsa:[{n:'Main — Checkpoint A'},{n:'Main — Checkpoint B'},{n:'Main — Checkpoint C'},{n:'PreCheck Lane'}],
+    parking:[{n:'Hourly/Daily Garage',d:'Terminal walkway',tot:1500,pr:'$22/day',walkMin:5},{n:'Economy E',d:'Shuttle 10min',tot:4000,pr:'$10/day',walkMin:16},{n:'Economy W',d:'Shuttle 10min',tot:3500,pr:'$10/day',walkMin:16}],
+    food:[{n:'Customshop',loc:'Concourse D Gate D7',e:'🍔'},{n:'Carolina Ale House',loc:'Concourse B',e:'🍺'},{n:'Portofino',loc:'Concourse E',e:'🍕'},{n:'Starbucks',loc:'Concourse C',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Curb Zone 5 Arrivals',e:'🚙'},{n:'CATS Bus 5',loc:'Arrivals lower',e:'🚌'},{n:'Yellow Cab',loc:'Arrivals island',e:'🚕'}],
+    busy:[13,10,8,7,10,20,44,68,78,80,74,70,74,80,80,76,80,84,76,62,46,32,22,14],
+    parkingWalkMin:7,checkinCounters:true,intlTerminals:[]},
+
+  DTW:{name:'Detroit Metropolitan Wayne County',icao:'KDTW',lat:42.2162,lon:-83.3554,city:'Detroit',timezone:'America/Detroit',
+    terminals:['McNamara','North'],
+    terminalWalkMin:{McNamara:10,North:12},
+    tsa:[{n:'McNamara — A Gates'},{n:'McNamara — B/C/D'},{n:'North Terminal — Main'},{n:'PreCheck Lane'}],
+    parking:[{n:'McNamara Garage',d:'Direct connection',tot:1100,pr:'$28/day',walkMin:5},{n:'North Garage',d:'North Terminal',tot:800,pr:'$28/day',walkMin:5},{n:'Economy Lot',d:'Shuttle 12min',tot:4000,pr:'$12/day',walkMin:18}],
+    food:[{n:'Hockeytown Cafe',loc:'McNamara Gate A52',e:'🏒'},{n:'Elias Brothers',loc:'North Terminal',e:'🍳'},{n:'Chili\'s',loc:'McNamara B Gates',e:'🌶'},{n:'Starbucks',loc:'McNamara',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Arrivals lower curb',e:'🚙'},{n:'SMART Bus',loc:'Arrivals level',e:'🚌'},{n:'Detroit Metro Cab',loc:'Arrivals island',e:'🚕'}],
+    busy:[12,10,8,7,9,20,42,66,78,80,74,68,70,76,78,76,80,84,74,60,44,30,22,13],
+    parkingWalkMin:7,checkinCounters:true,intlTerminals:[]},
+
+  MSP:{name:'Minneapolis-Saint Paul International',icao:'KMSP',lat:44.8848,lon:-93.2223,city:'Minneapolis',timezone:'America/Chicago',
+    terminals:['1-Lindbergh','2-Humphrey'],
+    terminalWalkMin:{'1-Lindbergh':10,'2-Humphrey':12},
+    tsa:[{n:'T1 — Checkpoint 1'},{n:'T1 — Checkpoint 2'},{n:'T2 — Main'},{n:'PreCheck Lane'}],
+    parking:[{n:'T1 Blue Ramp',d:'Skyway to T1',tot:1200,pr:'$30/day',walkMin:6},{n:'T1 Red Ramp',d:'Skyway to T1',tot:1000,pr:'$30/day',walkMin:7},{n:'T2 Economy',d:'Free shuttle',tot:2500,pr:'$12/day',walkMin:16}],
+    food:[{n:'Ike\'s Food & Cocktails',loc:'T1 Concourse G',e:'🍸'},{n:'Juut Salon Spa',loc:'T1 Concourse C',e:'✂️'},{n:'Smashburger',loc:'T1 Concourse F',e:'🍔'},{n:'Caribou Coffee',loc:'T1/T2',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'T1 Level 1 Door 7',e:'🚙'},{n:'Metro Blue/Green Line',loc:'T1 Station',e:'🚆'},{n:'Yellow Cab',loc:'Arrivals curb',e:'🚕'}],
+    busy:[12,10,8,7,9,20,42,66,78,80,74,68,70,76,78,76,80,84,74,60,44,30,20,12],
+    parkingWalkMin:7,checkinCounters:true,intlTerminals:[]},
+
+  PHL:{name:'Philadelphia International',icao:'KPHL',lat:39.8721,lon:-75.2411,city:'Philadelphia',timezone:'America/New_York',
+    terminals:['A','B','C','D','E','F'],
+    terminalWalkMin:{A:8,B:8,C:10,D:12,E:14,F:16},
+    tsa:[{n:'Terminal A-East'},{n:'Terminal B/C — American'},{n:'Terminal D/E'},{n:'Terminal F — Intl'}],
+    parking:[{n:'Garage A',d:'T-A/B direct',tot:700,pr:'$26/day',walkMin:5},{n:'Garage B',d:'T-D/E connected',tot:900,pr:'$26/day',walkMin:5},{n:'Economy E/F',d:'Shuttle 12min',tot:3000,pr:'$12/day',walkMin:18}],
+    food:[{n:'Tony Luke\'s',loc:'Terminal D',e:'🥪'},{n:'PHL Tap Room',loc:'Terminal C',e:'🍺'},{n:'Chickie\'s & Pete\'s',loc:'Terminal F',e:'🦀'},{n:'Starbucks',loc:'Terminal B',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Arrivals Road Lower Level',e:'🚙'},{n:'SEPTA Airport Line',loc:'Terminal E/F Station',e:'🚆'},{n:'PHL Taxi',loc:'Arrivals island',e:'🚕'}],
+    busy:[14,11,9,7,11,22,46,70,82,80,74,68,72,78,80,76,80,84,76,62,48,34,24,15],
+    parkingWalkMin:7,checkinCounters:true,intlTerminals:['A']},
+
+  BWI:{name:'Baltimore/Washington International',icao:'KBWI',lat:39.1754,lon:-76.6683,city:'Baltimore',timezone:'America/New_York',
+    terminals:['A','B','C','D','E'],
+    terminalWalkMin:{A:8,B:10,C:12,D:14,E:10},
+    tsa:[{n:'Concourse A/B — Southwest'},{n:'Concourse C/D'},{n:'Concourse E — Intl'},{n:'PreCheck Lane'}],
+    parking:[{n:'Garage A',d:'Walkway to A/B',tot:900,pr:'$22/day',walkMin:5},{n:'Daily Lot C',d:'Shuttle 8min',tot:2000,pr:'$14/day',walkMin:14},{n:'Economy E',d:'Shuttle 12min',tot:4000,pr:'$10/day',walkMin:18}],
+    food:[{n:'Obrycki\'s Crab',loc:'Concourse C',e:'🦀'},{n:'Grotto Pizza',loc:'Concourse B',e:'🍕'},{n:'Phillips Seafood',loc:'Concourse D',e:'🦞'},{n:'Dunkin',loc:'Concourse A',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Lower Level Door 14/15',e:'🚙'},{n:'MARC/Amtrak',loc:'BWI Rail Station (shuttle)',e:'🚆'},{n:'Yellow Cab',loc:'Arrivals curb',e:'🚕'}],
+    busy:[13,10,8,7,10,20,44,68,78,80,74,70,74,80,78,74,78,82,74,60,46,32,22,14],
+    parkingWalkMin:7,checkinCounters:true,intlTerminals:['E']},
+
+  SAN:{name:'San Diego International',icao:'KSAN',lat:32.7336,lon:-117.1897,city:'San Diego',timezone:'America/Los_Angeles',
+    terminals:['1','2'],
+    terminalWalkMin:{1:7,2:8},
+    tsa:[{n:'Terminal 1 — Gates 1-9'},{n:'Terminal 2 — Gates 20-51'},{n:'T2 West — Gates 40+'},{n:'PreCheck Lane'}],
+    parking:[{n:'Terminal 1 Parking',d:'T1 walkway',tot:700,pr:'$30/day',walkMin:5},{n:'Terminal 2 Parking',d:'T2 walkway',tot:900,pr:'$30/day',walkMin:5},{n:'Economy Lot',d:'Shuttle 8min',tot:2000,pr:'$18/day',walkMin:14}],
+    food:[{n:'Stone Brewing',loc:'Terminal 2 Gate 51',e:'🍺'},{n:'Oggi\'s Pizza',loc:'Terminal 2',e:'🍕'},{n:'Phil\'s BBQ',loc:'Terminal 1',e:'🥩'},{n:'Starbucks',loc:'Terminal 2',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'T1 & T2 Departures level',e:'🚙'},{n:'MTS Bus 992',loc:'T2 lower',e:'🚌'},{n:'SD Cab',loc:'Arrivals curb',e:'🚕'}],
+    busy:[14,11,9,7,10,20,42,66,78,80,76,72,76,80,78,74,78,82,74,60,46,32,24,15],
+    parkingWalkMin:6,checkinCounters:true,intlTerminals:[]},
+
+  TPA:{name:'Tampa International',icao:'KTPA',lat:27.9755,lon:-82.5332,city:'Tampa',timezone:'America/New_York',
+    terminals:['F','E','D','C'],
+    terminalWalkMin:{F:8,E:10,D:12,C:14},
+    tsa:[{n:'Airside F — Main'},{n:'Airside E'},{n:'Airside D'},{n:'Airside C — Intl'}],
+    parking:[{n:'Short Term',d:'Main terminal direct',tot:700,pr:'$28/day',walkMin:4},{n:'Economy Garage',d:'People mover',tot:3000,pr:'$12/day',walkMin:12},{n:'Economy Surface',d:'Free shuttle',tot:2000,pr:'$10/day',walkMin:16}],
+    food:[{n:'Columbia Restaurant',loc:'Airside F',e:'🥘'},{n:'Cigar City Brewing',loc:'Airside F',e:'🍺'},{n:'Meat District Co.',loc:'Airside E',e:'🥩'},{n:'Starbucks',loc:'Main Terminal',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Level 1 Arrivals Curb',e:'🚙'},{n:'HART Bus',loc:'Main Terminal',e:'🚌'},{n:'Tampa Cab',loc:'Arrivals island',e:'🚕'}],
+    busy:[13,10,8,7,10,20,42,66,78,80,76,72,76,82,80,76,80,84,76,62,48,34,24,14],
+    parkingWalkMin:6,checkinCounters:true,intlTerminals:['C']},
+
+  AUS:{name:'Austin-Bergstrom International',icao:'KAUS',lat:30.1975,lon:-97.6664,city:'Austin',timezone:'America/Chicago',
+    terminals:['Barbara Jordan','South'],
+    terminalWalkMin:{'Barbara Jordan':8,'South':10},
+    tsa:[{n:'Barbara Jordan — Checkpoint 1'},{n:'Barbara Jordan — Checkpoint 2'},{n:'South Terminal'},{n:'PreCheck Lane'}],
+    parking:[{n:'Garage 1',d:'Barbara Jordan direct',tot:800,pr:'$24/day',walkMin:5},{n:'Garage 2',d:'Barbara Jordan',tot:700,pr:'$24/day',walkMin:6},{n:'Economy Lot',d:'Shuttle 10min',tot:2500,pr:'$10/day',walkMin:16}],
+    food:[{n:'Salt Lick BBQ',loc:'Barbara Jordan Gate 7',e:'🥩'},{n:'Tacodeli',loc:'Barbara Jordan Gate 15',e:'🌮'},{n:'Stubb\'s',loc:'Gate 14',e:'🎸'},{n:'Starbucks',loc:'Barbara Jordan',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Arrivals Level Curb',e:'🚙'},{n:'CapMetro Bus 20',loc:'Arrivals lower',e:'🚌'},{n:'Austin Cab',loc:'Arrivals island',e:'🚕'}],
+    busy:[13,10,8,7,10,22,46,70,80,80,74,68,72,78,80,78,82,86,78,64,50,36,26,16],
+    parkingWalkMin:7,checkinCounters:true,intlTerminals:[]},
+
+  PDX:{name:'Portland International',icao:'KPDX',lat:45.5898,lon:-122.5951,city:'Portland',timezone:'America/Los_Angeles',
+    terminals:['Main','C','D','E'],
+    terminalWalkMin:{Main:8,C:10,D:12,E:14},
+    tsa:[{n:'Main — Checkpoint 1'},{n:'Main — Checkpoint 2'},{n:'Concourse E — Intl'},{n:'PreCheck Lane'}],
+    parking:[{n:'Short Term',d:'Terminal walkway',tot:700,pr:'$36/day',walkMin:5},{n:'Long Term',d:'Covered walkway',tot:1500,pr:'$22/day',walkMin:8},{n:'Economy',d:'Shuttle 10min',tot:3000,pr:'$14/day',walkMin:16}],
+    food:[{n:'Laurelwood Brewing',loc:'Concourse C',e:'🍺'},{n:'Pine State Biscuits',loc:'Main Terminal',e:'🥞'},{n:'Burgerville',loc:'Concourse D',e:'🍔'},{n:'Stumptown Coffee',loc:'Main',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Lower Level — Ride App Zone',e:'🚙'},{n:'MAX Red Line',loc:'Terminal Station',e:'🚆'},{n:'Radio Cab',loc:'Arrivals curb',e:'🚕'}],
+    busy:[13,10,8,7,9,20,42,66,76,78,72,68,70,76,78,74,78,82,74,58,44,30,22,14],
+    parkingWalkMin:6,checkinCounters:true,intlTerminals:['E']},
+
+  HNL:{name:'Daniel K. Inouye International',icao:'PHNL',lat:21.3187,lon:-157.9224,city:'Honolulu',timezone:'Pacific/Honolulu',
+    terminals:['1','2','Overseas'],
+    terminalWalkMin:{1:8,2:10,Overseas:18},
+    tsa:[{n:'Terminal 1 — Interisland'},{n:'Terminal 2 — Interisland'},{n:'Overseas Terminal — Mainland'},{n:'Intl Arrivals'}],
+    parking:[{n:'Terminal Garage',d:'All terminals',tot:1200,pr:'$20/day',walkMin:8},{n:'Economy Lot A',d:'Shuttle 10min',tot:2000,pr:'$12/day',walkMin:16},{n:'Valet',d:'Overseas Terminal',tot:200,pr:'$35/day',walkMin:3}],
+    food:[{n:'Mariposa',loc:'Overseas Concourse',e:'🌺'},{n:'Aloha Salads',loc:'Terminal 2',e:'🥗'},{n:'L&L Hawaiian BBQ',loc:'Terminal 1',e:'🍱'},{n:'Starbucks',loc:'Overseas Terminal',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Ground Level Arrivals',e:'🚙'},{n:'TheBus Route 20',loc:'Lower Level',e:'🚌'},{n:'Charley\'s Taxi',loc:'Arrivals curb',e:'🚕'}],
+    busy:[14,11,9,7,10,22,46,68,78,80,76,72,76,80,78,74,78,82,76,62,50,38,28,18],
+    parkingWalkMin:10,checkinCounters:true,intlTerminals:['Overseas']},
+
+  SJC:{name:'San Jose Mineta International',icao:'KSJC',lat:37.3626,lon:-121.9290,city:'San Jose',timezone:'America/Los_Angeles',
+    terminals:['A','B'],
+    terminalWalkMin:{A:7,B:8},
+    tsa:[{n:'Terminal A — Gates 1-6'},{n:'Terminal B — Gates 10-23'},{n:'T-B PreCheck'},{n:'Terminal B South'}],
+    parking:[{n:'Terminal A Garage',d:'T-A walkway',tot:600,pr:'$28/day',walkMin:4},{n:'Terminal B Garage',d:'T-B walkway',tot:800,pr:'$28/day',walkMin:4},{n:'Economy Remote',d:'Shuttle 10min',tot:2000,pr:'$14/day',walkMin:16}],
+    food:[{n:'Plumed Horse',loc:'Terminal B Gate 25',e:'🍷'},{n:'La Boulange',loc:'Terminal A',e:'🥐'},{n:'Gordon Biersch',loc:'Terminal B',e:'🍺'},{n:'Peet\'s Coffee',loc:'Terminal A/B',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Terminal B Arrivals',e:'🚙'},{n:'VTA Bus 10/60',loc:'Upper Level',e:'🚌'},{n:'South Bay Cab',loc:'Arrivals curb',e:'🚕'}],
+    busy:[13,10,8,6,9,20,44,70,80,80,74,68,70,76,78,76,80,84,76,60,44,30,22,13],
+    parkingWalkMin:6,checkinCounters:true,intlTerminals:[]},
+
+  RDU:{name:'Raleigh-Durham International',icao:'KRDU',lat:35.8776,lon:-78.7875,city:'Raleigh',timezone:'America/New_York',
+    terminals:['1','2'],
+    terminalWalkMin:{1:7,2:8},
+    tsa:[{n:'Terminal 1 — Checkpoint A'},{n:'Terminal 1 — Checkpoint B'},{n:'Terminal 2 — Main'},{n:'PreCheck Lane'}],
+    parking:[{n:'Daily Deck 1',d:'T1 walkway',tot:700,pr:'$18/day',walkMin:5},{n:'Daily Deck 2',d:'T2 walkway',tot:800,pr:'$18/day',walkMin:5},{n:'Economy E',d:'Shuttle 10min',tot:2500,pr:'$9/day',walkMin:16}],
+    food:[{n:'Irregardless Cafe',loc:'Terminal 2 Gate D',e:'🥗'},{n:'42nd St Oyster Bar',loc:'Terminal 2',e:'🦪'},{n:'Chick-fil-A',loc:'Terminal 1',e:'🍗'},{n:'Starbucks',loc:'Terminal 2',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Terminal 2 Arrivals',e:'🚙'},{n:'GoTriangle Bus',loc:'Terminal 2',e:'🚌'},{n:'National Cab',loc:'Arrivals island',e:'🚕'}],
+    busy:[12,9,7,6,9,18,40,64,74,78,72,66,70,76,78,74,78,82,72,58,42,28,20,12],
+    parkingWalkMin:6,checkinCounters:true,intlTerminals:[]},
+
+  /* ── INTERNATIONAL ── */
+  LHR:{name:'London Heathrow',icao:'EGLL',lat:51.4700,lon:-0.4543,city:'London',timezone:'Europe/London',
+    terminals:['2','3','4','5'],
+    terminalWalkMin:{2:12,3:14,4:16,5:18},
+    tsa:[{n:'T2 — Security'},{n:'T3 — Security'},{n:'T4 — Security'},{n:'T5 — Security'}],
+    parking:[{n:'T5 Short Stay',d:'T5 walkway',tot:1200,pr:'£40/day',walkMin:5},{n:'T2/T3 Multi-Storey',d:'T2 walkway',tot:2000,pr:'£35/day',walkMin:8},{n:'Long Stay',d:'Shuttle 12min',tot:8000,pr:'£18/day',walkMin:18}],
+    food:[{n:'Heston Blumenthal\'s Perfectionists\' Café',loc:'T2 Gate B',e:'🍽'},{n:'Wagamama',loc:'T3',e:'🍜'},{n:'Gordon Ramsay Plane Food',loc:'T5',e:'🍴'},{n:'Costa Coffee',loc:'All terminals',e:'☕'}],
+    ride:[{n:'Uber',loc:'T2/T3/T4/T5 Arrivals',e:'🚙'},{n:'Elizabeth Line/Heathrow Express',loc:'T2/T3 & T5 stations',e:'🚆'},{n:'Black Cab',loc:'Arrivals taxi rank',e:'🚕'}],
+    busy:[16,13,10,9,14,28,55,78,88,86,80,74,78,84,84,80,84,88,82,68,54,40,30,20],
+    parkingWalkMin:10,checkinCounters:true,intlTerminals:['2','3','4','5']},
+
+  CDG:{name:'Paris Charles de Gaulle',icao:'LFPG',lat:49.0097,lon:2.5479,city:'Paris',timezone:'Europe/Paris',
+    terminals:['1','2A','2B','2C','2D','2E','2F','3'],
+    terminalWalkMin:{1:14,2:12,'2A':10,'2B':10,'2C':10,'2D':10,'2E':12,'2F':12,3:16},
+    tsa:[{n:'T1 — Security'},{n:'T2A/B — Air France'},{n:'T2E — Main Hall'},{n:'T3 — Low Cost'}],
+    parking:[{n:'P1/P3 — T1',d:'T1 direct',tot:2000,pr:'€30/day',walkMin:6},{n:'P2 — T2',d:'T2 walkway',tot:3000,pr:'€28/day',walkMin:6},{n:'Vacances',d:'CDG Val shuttle',tot:6000,pr:'€12/day',walkMin:18}],
+    food:[{n:'Ladurée',loc:'T2E Hall L',e:'🧁'},{n:'Brasserie Flo',loc:'T2F',e:'🍷'},{n:'Paul Boulangerie',loc:'T1/T2',e:'🥖'},{n:'Starbucks',loc:'T2E',e:'☕'}],
+    ride:[{n:'Uber',loc:'T1/T2/T3 Arrivals',e:'🚙'},{n:'RER B',loc:'T2 CDG Station',e:'🚆'},{n:'Paris Taxi',loc:'Taxi rank — all terminals',e:'🚕'}],
+    busy:[15,12,10,8,13,26,52,76,86,84,78,72,76,82,84,80,84,88,80,66,52,38,28,18],
+    parkingWalkMin:10,checkinCounters:true,intlTerminals:['1','2A','2B','2C','2D','2E','2F','3']},
+
+  FRA:{name:'Frankfurt Airport',icao:'EDDF',lat:50.0379,lon:8.5622,city:'Frankfurt',timezone:'Europe/Berlin',
+    terminals:['1','2'],
+    terminalWalkMin:{1:14,2:18},
+    tsa:[{n:'T1 — Hall A Security'},{n:'T1 — Hall B Security'},{n:'T2 — Security'},{n:'T1 — Hall C/D'}],
+    parking:[{n:'P1/P2 — T1',d:'T1 Sky Line',tot:2500,pr:'€29/day',walkMin:7},{n:'P3/P4',d:'T1 walkway',tot:3000,pr:'€25/day',walkMin:10},{n:'P36 Economy',d:'Shuttle 15min',tot:5000,pr:'€12/day',walkMin:20}],
+    food:[{n:'Roomers Bar',loc:'T1 Hall A',e:'🍸'},{n:'Bistro MD',loc:'T1 Hall B',e:'🥗'},{n:'Subway',loc:'T2',e:'🥪'},{n:'Starbucks',loc:'T1/T2',e:'☕'}],
+    ride:[{n:'Uber',loc:'T1 Arrivals Hall B',e:'🚙'},{n:'S-Bahn / ICE',loc:'T1 & T2 stations',e:'🚆'},{n:'Frankfurt Taxi',loc:'All terminals rank',e:'🚕'}],
+    busy:[14,11,9,8,13,26,54,78,86,84,78,72,76,82,84,80,84,88,80,66,52,38,28,17],
+    parkingWalkMin:10,checkinCounters:true,intlTerminals:['1','2']},
+
+  DXB:{name:'Dubai International',icao:'OMDB',lat:25.2532,lon:55.3657,city:'Dubai',timezone:'Asia/Dubai',
+    terminals:['1','2','3'],
+    terminalWalkMin:{1:16,2:12,3:18},
+    tsa:[{n:'T1 — Concourse C'},{n:'T2 — Low Cost'},{n:'T3 — Emirates Hub'},{n:'T3 Concourse A/B'}],
+    parking:[{n:'T1 Short Stay',d:'T1 direct',tot:2000,pr:'AED 20/hr',walkMin:6},{n:'T3 Parking',d:'T3 direct',tot:3000,pr:'AED 20/hr',walkMin:6},{n:'Long Term',d:'Shuttle 12min',tot:8000,pr:'AED 50/day',walkMin:18}],
+    food:[{n:'Al Fanar',loc:'T3 Concourse B',e:'🧆'},{n:'Elevation Burger',loc:'T3 Concourse A',e:'🍔'},{n:'Wafi Gourmet',loc:'T1',e:'🥙'},{n:'Costa Coffee',loc:'All terminals',e:'☕'}],
+    ride:[{n:'Uber / Careem',loc:'T1/T2/T3 Arrivals',e:'🚙'},{n:'Dubai Metro Red Line',loc:'T1 & T3 stations',e:'🚆'},{n:'Dubai Taxi',loc:'Arrivals rank — all terminals',e:'🚕'}],
+    busy:[20,16,14,12,16,28,52,74,80,78,74,72,76,82,82,80,84,88,84,74,64,52,38,26],
+    parkingWalkMin:10,checkinCounters:true,intlTerminals:['1','2','3']},
+
+  NRT:{name:'Tokyo Narita International',icao:'RJAA',lat:35.7720,lon:140.3929,city:'Tokyo',timezone:'Asia/Tokyo',
+    terminals:['1','2','3'],
+    terminalWalkMin:{1:14,2:12,3:10},
+    tsa:[{n:'T1 — South Wing'},{n:'T1 — North Wing'},{n:'T2 — Security'},{n:'T3 — LCC'}],
+    parking:[{n:'T1 Parking',d:'T1 walkway',tot:2200,pr:'¥2500/day',walkMin:7},{n:'T2 Parking',d:'T2 direct',tot:2000,pr:'¥2500/day',walkMin:6},{n:'Long Stay',d:'Shuttle 12min',tot:5000,pr:'¥1200/day',walkMin:18}],
+    food:[{n:'Ichiran Ramen',loc:'T1 Gate 32',e:'🍜'},{n:'Sushi Kyubey',loc:'T2',e:'🍣'},{n:'Yoshinoya',loc:'T1/T2/T3',e:'🍱'},{n:'Tully\'s Coffee',loc:'All terminals',e:'☕'}],
+    ride:[{n:'Uber Japan',loc:'T1/T2 Arrivals',e:'🚙'},{n:'Narita Express N\'EX',loc:'T1 & T2 stations',e:'🚆'},{n:'Tokyo Cab',loc:'Taxi rank all terminals',e:'🚕'}],
+    busy:[12,10,8,7,10,22,46,70,80,80,74,70,74,80,80,76,80,84,78,64,50,36,26,16],
+    parkingWalkMin:9,checkinCounters:true,intlTerminals:['1','2','3']},
+
+  ICN:{name:'Incheon International',icao:'RKSI',lat:37.4602,lon:126.4407,city:'Seoul',timezone:'Asia/Seoul',
+    terminals:['1','2'],
+    terminalWalkMin:{1:14,2:16},
+    tsa:[{n:'T1 — Security A'},{n:'T1 — Security B'},{n:'T2 — Security'},{n:'T1 Skytrax'}],
+    parking:[{n:'T1 Parking',d:'T1 direct',tot:3000,pr:'₩25000/day',walkMin:7},{n:'T2 Parking',d:'T2 direct',tot:2000,pr:'₩25000/day',walkMin:7},{n:'Long Term',d:'Shuttle 10min',tot:8000,pr:'₩12000/day',walkMin:18}],
+    food:[{n:'Bibigo',loc:'T1 Gate 30',e:'🍲'},{n:'Tosokchon Samgyetang',loc:'T1',e:'🍗'},{n:'Paris Baguette',loc:'T1/T2',e:'🥐'},{n:'A Twosome Place',loc:'T2',e:'☕'}],
+    ride:[{n:'Kakao T',loc:'T1/T2 Arrivals',e:'🚙'},{n:'AREX Express',loc:'T1 & T2 stations',e:'🚆'},{n:'Incheon Taxi',loc:'Taxi rank',e:'🚕'}],
+    busy:[13,10,8,7,10,22,46,70,80,80,76,72,76,82,82,78,82,86,80,66,52,38,28,17],
+    parkingWalkMin:9,checkinCounters:true,intlTerminals:['1','2']},
+
+  SYD:{name:'Sydney Kingsford Smith',icao:'YSSY',lat:-33.9461,lon:151.1772,city:'Sydney',timezone:'Australia/Sydney',
+    terminals:['T1','T2','T3'],
+    terminalWalkMin:{T1:12,T2:10,T3:8},
+    tsa:[{n:'T1 — International'},{n:'T2 — Domestic'},{n:'T3 — Qantas Domestic'},{n:'T1 Passport Control'}],
+    parking:[{n:'T1 Short Stay',d:'T1 walkway',tot:1200,pr:'A$45/day',walkMin:5},{n:'T1 Long Stay',d:'Shuttle 8min',tot:3000,pr:'A$25/day',walkMin:14},{n:'T2/T3 Parking',d:'T2 walkway',tot:1500,pr:'A$38/day',walkMin:6}],
+    food:[{n:'Bills',loc:'T1 International',e:'🥞'},{n:'Rockpool Bar & Grill',loc:'T1',e:'🥩'},{n:'Mad Mex',loc:'T2',e:'🌮'},{n:'Gloria Jean\'s',loc:'T2/T3',e:'☕'}],
+    ride:[{n:'Uber',loc:'T1/T2/T3 Ground Level',e:'🚙'},{n:'Airport Link Train',loc:'T1 & T2/T3 stations',e:'🚆'},{n:'Silver Service Taxi',loc:'Taxi rank all terminals',e:'🚕'}],
+    busy:[14,11,9,7,10,20,42,66,78,80,76,72,76,80,80,76,80,84,76,62,48,34,24,15],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['T1']},
+
+  YYZ:{name:'Toronto Pearson International',icao:'CYYZ',lat:43.6777,lon:-79.6248,city:'Toronto',timezone:'America/Toronto',
+    terminals:['1','3'],
+    terminalWalkMin:{1:12,3:14},
+    tsa:[{n:'T1 — Departures Level 3'},{n:'T1 — US Transborder'},{n:'T3 — Departures'},{n:'T3 — US Transborder'}],
+    parking:[{n:'T1 Viscount Garage',d:'T1 walkway',tot:1500,pr:'C$40/day',walkMin:6},{n:'T3 Garage',d:'T3 walkway',tot:1200,pr:'C$35/day',walkMin:6},{n:'Park\'N Fly',d:'Shuttle 12min',tot:5000,pr:'C$15/day',walkMin:18}],
+    food:[{n:'Marble Slab Creamery',loc:'T1 Gate F',e:'🍦'},{n:'Harvey\'s',loc:'T1 Gate D',e:'🍔'},{n:'Tim Hortons',loc:'T1/T3',e:'☕'},{n:'SkyBar',loc:'T3',e:'🍸'}],
+    ride:[{n:'Uber / Lyft',loc:'T1 & T3 Arrivals Level',e:'🚙'},{n:'UP Express',loc:'T1 station',e:'🚆'},{n:'Beck Taxi',loc:'Taxi rank all terminals',e:'🚕'}],
+    busy:[14,11,9,8,12,24,48,72,82,82,76,70,74,80,82,78,82,86,78,64,50,36,26,16],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['1','3']},
+
+  MEX:{name:'Mexico City Benito Juárez Intl',icao:'MMMX',lat:19.4363,lon:-99.0721,city:'Mexico City',timezone:'America/Mexico_City',
+    terminals:['1','2'],
+    terminalWalkMin:{1:12,2:14},
+    tsa:[{n:'T1 — Sala A/B'},{n:'T1 — Sala C/D'},{n:'T2 — International'},{n:'T2 — Domestic'}],
+    parking:[{n:'T1 Parking',d:'T1 walkway',tot:1200,pr:'MXN 120/hr',walkMin:6},{n:'T2 Parking',d:'T2 direct',tot:1000,pr:'MXN 120/hr',walkMin:6},{n:'Remote Lot',d:'Free shuttle',tot:3000,pr:'MXN 80/day',walkMin:18}],
+    food:[{n:'El Cardenal',loc:'T1 Sala C',e:'🌮'},{n:'Sanborns',loc:'T1/T2',e:'🍽'},{n:'Cinnabon',loc:'T2',e:'🍩'},{n:'Starbucks',loc:'T1/T2',e:'☕'}],
+    ride:[{n:'Uber',loc:'T1 & T2 Arrivals',e:'🚙'},{n:'Metro Line 5',loc:'Terminal Aérea station',e:'🚆'},{n:'Sitio Taxi',loc:'Official taxi booths',e:'🚕'}],
+    busy:[15,12,10,8,12,24,50,72,80,80,76,72,76,82,82,78,82,86,80,66,52,38,28,18],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['2']},
+
+  IAD:{name:'Washington Dulles International',icao:'KIAD',lat:38.9531,lon:-77.4565,city:'Washington D.C.',timezone:'America/New_York',
+    terminals:['Main','A','B','C','D'],
+    terminalWalkMin:{Main:5,A:10,B:12,C:14,D:16},
+    tsa:[{n:'Main Terminal — East'},{n:'Main Terminal — West'},{n:'Concourse A/B'},{n:'Concourse C/D — Intl'}],
+    parking:[{n:'Garage 1',d:'Main Terminal direct',tot:900,pr:'$20/day',walkMin:4},{n:'Garage 2',d:'Main Terminal direct',tot:1100,pr:'$20/day',walkMin:5},{n:'Economy Lot',d:'Shuttle 12min',tot:6000,pr:'$10/day',walkMin:18}],
+    food:[{n:'Sweetgreen',loc:'Concourse B',e:'🥗'},{n:'District Chophouse',loc:'Main Terminal',e:'🍺'},{n:"Ben's Chili Bowl",loc:'Concourse C',e:'🌭'},{n:'Starbucks',loc:'Main Terminal & A',e:'☕'}],
+    ride:[{n:'Uber / Lyft',loc:'Arrivals Curb — Main Terminal',e:'🚙'},{n:'Washington Flyer Coach',loc:'Main Terminal',e:'🚌'},{n:'Silver Line Express Bus',loc:'Arrivals Level',e:'🚌'}],
+    busy:[12,10,8,7,9,20,42,68,80,80,74,68,72,78,78,74,80,84,76,60,46,32,22,14],
+    parkingWalkMin:7,checkinCounters:true,intlTerminals:['C','D']},
+
+  GRU:{name:'São Paulo Guarulhos International',icao:'SBGR',lat:-23.4356,lon:-46.4731,city:'São Paulo',timezone:'America/Sao_Paulo',
+    terminals:['1','2','3'],
+    terminalWalkMin:{1:12,2:14,3:10},
+    tsa:[{n:'T1 — Domestic'},{n:'T2 — International'},{n:'T3 — Mixed Use'},{n:'T2 Emigration'}],
+    parking:[{n:'T1/T2 Parking',d:'Terminal walkway',tot:2000,pr:'BRL 80/day',walkMin:7},{n:'T3 Parking',d:'T3 direct',tot:1200,pr:'BRL 80/day',walkMin:6},{n:'Economy',d:'Shuttle 15min',tot:5000,pr:'BRL 40/day',walkMin:20}],
+    food:[{n:'Fogo de Chão',loc:'T2 International',e:'🥩'},{n:'Bob\'s Burger',loc:'T1',e:'🍔'},{n:'Pão de Açúcar Gourmet',loc:'T2',e:'🛒'},{n:'Starbucks',loc:'T2/T3',e:'☕'}],
+    ride:[{n:'Uber / 99',loc:'T1/T2/T3 Arrivals',e:'🚙'},{n:'EMTU Bus',loc:'All terminals',e:'🚌'},{n:'Guarucoop Taxi',loc:'Official taxi rank',e:'🚕'}],
+    busy:[14,11,9,7,11,22,46,68,78,80,76,72,76,82,82,78,82,86,80,66,52,38,28,17],
+    parkingWalkMin:9,checkinCounters:true,intlTerminals:['2','3']},
+  /* ── MORE INTERNATIONAL ── */
+  AMS:{name:'Amsterdam Schiphol',icao:'EHAM',lat:52.3105,lon:4.7683,city:'Amsterdam',timezone:'Europe/Amsterdam',
+    terminals:['1','2','3'],
+    terminalWalkMin:{1:10,2:12,3:14},
+    tsa:[{n:'Departure Hall 1'},{n:'Departure Hall 2'},{n:'Departure Hall 3'},{n:'Schengen Fast Track'}],
+    parking:[{n:'P1/P3 Short Stay',d:'Terminal direct',tot:2000,pr:'€38/day',walkMin:5},{n:'P2 Long Stay',d:'Shuttle 8min',tot:4000,pr:'€18/day',walkMin:16},{n:'P Comfort',d:'Walkway connected',tot:1200,pr:'€28/day',walkMin:8}],
+    food:[{n:'Rijksmuseum Café',loc:'Lounge 3',e:'🎨'},{n:'Burger King',loc:'Departure Hall 2',e:'🍔'},{n:'Heineken experience bar',loc:'Lounge 1',e:'🍺'},{n:'Starbucks',loc:'All halls',e:'☕'}],
+    ride:[{n:'Uber',loc:'Arrivals Hall — lower level',e:'🚙'},{n:'Schiphol Taxi',loc:'Arrivals curb',e:'🚕'},{n:'NS Train',loc:'Schiphol Plaza — underground',e:'🚆'}],
+    busy:[14,11,9,8,12,26,52,76,86,84,78,72,76,82,84,80,84,88,80,66,52,38,28,18],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['1','2','3']},
+
+  SIN:{name:'Singapore Changi',icao:'WSSS',lat:1.3644,lon:103.9915,city:'Singapore',timezone:'Asia/Singapore',
+    terminals:['1','2','3','4'],
+    terminalWalkMin:{1:12,2:14,3:16,4:10},
+    tsa:[{n:'T1 — Security'},{n:'T2 — Security'},{n:'T3 — Security'},{n:'T4 — Security'}],
+    parking:[{n:'T1 Carpark A',d:'T1 direct',tot:1800,pr:'SGD 12/hr',walkMin:5},{n:'T3 Carpark B',d:'T3 direct',tot:2200,pr:'SGD 12/hr',walkMin:5},{n:'Economy Carpark',d:'Free shuttle',tot:5000,pr:'SGD 5/hr',walkMin:18}],
+    food:[{n:'A&W',loc:'T2 Level 2',e:'🍔'},{n:'Din Tai Fung',loc:'T3 Departure',e:'🥟'},{n:'Peach Garden',loc:'T1',e:'🍜'},{n:'Starbucks',loc:'All terminals',e:'☕'}],
+    ride:[{n:'Grab / Uber',loc:'T1/T2/T3/T4 Arrivals',e:'🚙'},{n:'MRT (East-West Line)',loc:'T2 & T3 Basement',e:'🚆'},{n:'Public Bus',loc:'Bus stops all terminals',e:'🚌'}],
+    busy:[16,13,11,9,12,24,48,72,82,84,80,76,78,84,82,78,82,86,80,68,56,44,34,22],
+    parkingWalkMin:7,checkinCounters:true,intlTerminals:['1','2','3','4']},
+
+  HKG:{name:'Hong Kong International',icao:'VHHH',lat:22.3080,lon:113.9185,city:'Hong Kong',timezone:'Asia/Hong_Kong',
+    terminals:['1','2'],
+    terminalWalkMin:{1:14,2:12},
+    tsa:[{n:'T1 — Security Hall A'},{n:'T1 — Security Hall B'},{n:'T2 — Security'},{n:'T1 Restricted Area'}],
+    parking:[{n:'T1 Car Park',d:'T1 connected',tot:2000,pr:'HKD 180/day',walkMin:6},{n:'T2 Car Park',d:'T2 direct',tot:1500,pr:'HKD 160/day',walkMin:6},{n:'Economy',d:'Shuttle 12min',tot:4000,pr:'HKD 80/day',walkMin:18}],
+    food:[{n:'Tim Ho Wan',loc:'T1 Departure',e:'🥟'},{n:'Cathay Pacific Lounge',loc:'T1 Restricted',e:'🍷'},{n:'McDonald\'s',loc:'T1/T2',e:'🍔'},{n:'Pacific Coffee',loc:'All areas',e:'☕'}],
+    ride:[{n:'Uber / HKTaxi',loc:'T1 Ground Transport',e:'🚙'},{n:'Airport Express MTR',loc:'T1 & T2 station',e:'🚆'},{n:'Taxi',loc:'Arrivals rank all terminals',e:'🚕'}],
+    busy:[18,15,13,11,14,26,50,72,80,82,80,76,78,84,82,80,84,88,82,70,58,46,36,24],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['1','2']},
+
+  MAD:{name:'Madrid Barajas International',icao:'LEMD',lat:40.4936,lon:-3.5668,city:'Madrid',timezone:'Europe/Madrid',
+    terminals:['T1','T2','T3','T4','T4S'],
+    terminalWalkMin:{T1:10,T2:10,T3:12,T4:14,T4S:18},
+    tsa:[{n:'T1 — Security'},{n:'T2 — Security'},{n:'T4 — Schengen'},{n:'T4S — Non-Schengen'}],
+    parking:[{n:'T1/T2/T3 Parking',d:'Direct walkway',tot:1500,pr:'€30/day',walkMin:6},{n:'T4 Parking',d:'T4 direct',tot:2000,pr:'€28/day',walkMin:5},{n:'Economy P0',d:'Free shuttle',tot:6000,pr:'€10/day',walkMin:20}],
+    food:[{n:'Chocolatería San Ginés',loc:'T4 Departures',e:'🍫'},{n:'Lateral',loc:'T1',e:'🥘'},{n:'Burger King',loc:'T2/T4',e:'🍔'},{n:'Starbucks',loc:'T1/T2/T4',e:'☕'}],
+    ride:[{n:'Uber / Cabify',loc:'T1/T2/T3/T4 Arrivals',e:'🚙'},{n:'Metro Line 8',loc:'T2 & T4 stations',e:'🚆'},{n:'Madrid Taxi',loc:'Arrivals rank',e:'🚕'}],
+    busy:[13,10,8,7,10,22,48,72,82,82,78,74,78,82,80,78,82,86,80,66,52,38,28,16],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['T4S']},
+
+  BCN:{name:'Barcelona El Prat',icao:'LEBL',lat:41.2971,lon:2.0785,city:'Barcelona',timezone:'Europe/Madrid',
+    terminals:['T1','T2A','T2B','T2C'],
+    terminalWalkMin:{T1:12,T2A:10,T2B:10,T2C:12},
+    tsa:[{n:'T1 — Security A'},{n:'T1 — Security B'},{n:'T2 — Security'},{n:'T1 Fast Track'}],
+    parking:[{n:'T1 Long Stay',d:'T1 walkway',tot:1800,pr:'€26/day',walkMin:7},{n:'T2 Short Stay',d:'T2 direct',tot:1200,pr:'€32/day',walkMin:5},{n:'Economy',d:'Shuttle 15min',tot:5000,pr:'€12/day',walkMin:20}],
+    food:[{n:'Lateral Tapas',loc:'T1 Departures',e:'🥘'},{n:'Can Culleretes',loc:'T1',e:'🍷'},{n:'Boqueria Bar',loc:'T1',e:'🥗'},{n:'Starbucks',loc:'T1/T2',e:'☕'}],
+    ride:[{n:'Uber / Cabify',loc:'T1 & T2 Arrivals',e:'🚙'},{n:'Aerobus',loc:'T1 & T2 stops',e:'🚌'},{n:'Barcelona Taxi',loc:'Taxi rank all terminals',e:'🚕'}],
+    busy:[13,10,8,7,10,22,46,70,80,80,76,72,76,80,78,76,80,84,78,64,50,36,26,16],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['T1','T2B','T2C']},
+
+  MUC:{name:'Munich Airport',icao:'EDDM',lat:48.3537,lon:11.7750,city:'Munich',timezone:'Europe/Berlin',
+    terminals:['T1','T2','MAC'],
+    terminalWalkMin:{T1:12,T2:14,MAC:10},
+    tsa:[{n:'T1 — Security A-F'},{n:'T2 — Security'},{n:'MAC — Security'},{n:'T2 Fast Lane'}],
+    parking:[{n:'P1 — T1',d:'T1 walkway',tot:1600,pr:'€29/day',walkMin:6},{n:'P20 — T2',d:'T2 walkway',tot:2000,pr:'€29/day',walkMin:7},{n:'P44 Economy',d:'Shuttle 12min',tot:6000,pr:'€12/day',walkMin:20}],
+    food:[{n:'Airbräu Brewery',loc:'Between T1/T2',e:'🍺'},{n:'Käfer Deli',loc:'T2 Departures',e:'🧀'},{n:'Burger King',loc:'T1/T2',e:'🍔'},{n:'Starbucks',loc:'T1/T2/MAC',e:'☕'}],
+    ride:[{n:'Uber',loc:'T1 & T2 Arrivals',e:'🚙'},{n:'S-Bahn S1/S8',loc:'T1 & T2 stations',e:'🚆'},{n:'Munich Taxi',loc:'Taxi rank all terminals',e:'🚕'}],
+    busy:[13,10,8,7,11,24,50,74,84,82,76,70,74,80,82,78,82,86,78,64,50,36,26,16],
+    parkingWalkMin:9,checkinCounters:true,intlTerminals:['T1','T2']},
+
+  FCO:{name:'Rome Fiumicino',icao:'LIRF',lat:41.8003,lon:12.2389,city:'Rome',timezone:'Europe/Rome',
+    terminals:['T1','T2','T3'],
+    terminalWalkMin:{T1:12,T2:10,T3:14},
+    tsa:[{n:'T1 — Domestic'},{n:'T3 — Schengen'},{n:'T3 — Non-Schengen'},{n:'T1 Fast Track'}],
+    parking:[{n:'P1 — T1/T3',d:'Short walk',tot:1400,pr:'€25/day',walkMin:6},{n:'P5 — Long Stay',d:'Shuttle 10min',tot:5000,pr:'€10/day',walkMin:18},{n:'Flex Parking',d:'T3 walkway',tot:1200,pr:'€18/day',walkMin:8}],
+    food:[{n:'Sapori & Dintorni',loc:'T3 Departures',e:'🍝'},{n:'McDonald\'s',loc:'T1/T3',e:'🍔'},{n:'Eataly',loc:'T3 Landside',e:'🍕'},{n:'Starbucks',loc:'T3',e:'☕'}],
+    ride:[{n:'Uber / Cabify',loc:'T1/T3 Arrivals',e:'🚙'},{n:'Leonardo Express',loc:'T3 station',e:'🚆'},{n:'Rome Taxi',loc:'Arrivals rank all terminals',e:'🚕'}],
+    busy:[12,9,7,6,9,20,44,68,78,80,76,72,74,80,78,76,80,84,76,62,48,34,24,15],
+    parkingWalkMin:9,checkinCounters:true,intlTerminals:['T3']},
+
+  PEK:{name:'Beijing Capital International',icao:'ZBAA',lat:40.0799,lon:116.6031,city:'Beijing',timezone:'Asia/Shanghai',
+    terminals:['T1','T2','T3'],
+    terminalWalkMin:{T1:10,T2:12,T3:16},
+    tsa:[{n:'T1 — Domestic'},{n:'T2 — International'},{n:'T3D — Domestic'},{n:'T3E — International'}],
+    parking:[{n:'T2 Parking',d:'T2 direct',tot:2500,pr:'¥25/day',walkMin:6},{n:'T3 Parking',d:'T3 walkway',tot:3000,pr:'¥25/day',walkMin:7},{n:'Remote Lot',d:'Shuttle 12min',tot:8000,pr:'¥10/day',walkMin:20}],
+    food:[{n:'Quanjude Roast Duck',loc:'T3E',e:'🦆'},{n:'Yoshinoya',loc:'T2/T3',e:'🍱'},{n:'Starbucks',loc:'All terminals',e:'☕'},{n:'McDonald\'s',loc:'T1/T2/T3',e:'🍔'}],
+    ride:[{n:'Didi',loc:'T2 & T3 Arrivals',e:'🚙'},{n:'Airport Express',loc:'T2 & T3 stations',e:'🚆'},{n:'Beijing Taxi',loc:'Taxi rank all terminals',e:'🚕'}],
+    busy:[15,12,10,9,12,24,50,74,84,84,80,76,78,84,82,80,84,88,82,70,56,44,34,22],
+    parkingWalkMin:9,checkinCounters:true,intlTerminals:['T2','T3E']},
+
+  PVG:{name:'Shanghai Pudong International',icao:'ZSPD',lat:31.1443,lon:121.8083,city:'Shanghai',timezone:'Asia/Shanghai',
+    terminals:['T1','T2'],
+    terminalWalkMin:{T1:14,T2:16},
+    tsa:[{n:'T1 — Security'},{n:'T2 — Security'},{n:'T1 Fast Track'},{n:'T2 International'}],
+    parking:[{n:'T1 Parking',d:'T1 direct',tot:2200,pr:'¥20/hr',walkMin:6},{n:'T2 Parking',d:'T2 direct',tot:2500,pr:'¥20/hr',walkMin:6},{n:'Long Term',d:'Shuttle 10min',tot:6000,pr:'¥60/day',walkMin:18}],
+    food:[{n:'Din Tai Fung',loc:'T2 Departures',e:'🥟'},{n:'Crystal Jade',loc:'T1',e:'🍜'},{n:'McDonald\'s',loc:'T1/T2',e:'🍔'},{n:'Starbucks',loc:'T1/T2',e:'☕'}],
+    ride:[{n:'Didi',loc:'T1 & T2 Arrivals',e:'🚙'},{n:'Maglev',loc:'T2 Station',e:'🚆'},{n:'Metro Line 2',loc:'T2 Basement',e:'🚇'}],
+    busy:[16,13,11,9,13,25,50,74,84,84,80,76,78,84,82,80,84,88,82,70,56,44,34,22],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['T1','T2']},
+
+  DOH:{name:'Hamad International',icao:'OTHH',lat:25.2731,lon:51.6082,city:'Doha',timezone:'Asia/Qatar',
+    terminals:['1'],
+    terminalWalkMin:{1:12},
+    tsa:[{n:'Main Security — Zone A'},{n:'Main Security — Zone B'},{n:'Premium Security'},{n:'Oryx Lounge Fast Track'}],
+    parking:[{n:'Short Stay P1',d:'Terminal walkway',tot:2000,pr:'QAR 20/hr',walkMin:5},{n:'Long Stay P2',d:'Shuttle 8min',tot:5000,pr:'QAR 60/day',walkMin:15},{n:'Economy P3',d:'Shuttle 12min',tot:8000,pr:'QAR 30/day',walkMin:20}],
+    food:[{n:'Parisa',loc:'Departures Hall',e:'🥘'},{n:'The Noodle House',loc:'Concourse B',e:'🍜'},{n:'Shake Shack',loc:'Concourse D',e:'🍔'},{n:'Costa Coffee',loc:'All concourses',e:'☕'}],
+    ride:[{n:'Uber / Karwa',loc:'Arrivals Level',e:'🚙'},{n:'Doha Metro Red Line',loc:'Airport station',e:'🚆'},{n:'Karwa Taxi',loc:'Arrivals rank',e:'🚕'}],
+    busy:[20,17,15,13,16,28,52,74,80,80,76,74,76,82,82,80,84,88,84,74,64,52,40,28],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['1']},
+
+  DEL:{name:'Indira Gandhi International',icao:'VIDP',lat:28.5665,lon:77.1031,city:'New Delhi',timezone:'Asia/Kolkata',
+    terminals:['T1','T2','T3'],
+    terminalWalkMin:{T1:10,T2:12,T3:16},
+    tsa:[{n:'T1 — CISF Security'},{n:'T2 — Security'},{n:'T3 — International'},{n:'T3 — Domestic'}],
+    parking:[{n:'T3 Multilevel',d:'T3 walkway',tot:2000,pr:'₹200/day',walkMin:6},{n:'T1 Parking',d:'T1 direct',tot:1200,pr:'₹150/day',walkMin:5},{n:'Economy',d:'Shuttle 12min',tot:5000,pr:'₹80/day',walkMin:18}],
+    food:[{n:'Punjabi By Nature',loc:'T3 Departures',e:'🍛'},{n:'McDonald\'s',loc:'T1/T2/T3',e:'🍔'},{n:'Café Coffee Day',loc:'All terminals',e:'☕'},{n:'Sarvana Bhavan',loc:'T3',e:'🍛'}],
+    ride:[{n:'Uber / Ola',loc:'T1/T2/T3 Arrivals',e:'🚙'},{n:'Airport Express Metro',loc:'T3 Station',e:'🚆'},{n:'Prepaid Taxi',loc:'Arrivals rank',e:'🚕'}],
+    busy:[15,12,10,8,11,22,46,70,80,82,80,76,78,84,82,78,82,86,80,66,52,38,28,18],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['T3']},
+
+  BOM:{name:'Chhatrapati Shivaji Maharaj International',icao:'VABB',lat:19.0887,lon:72.8679,city:'Mumbai',timezone:'Asia/Kolkata',
+    terminals:['T1','T2'],
+    terminalWalkMin:{T1:12,T2:16},
+    tsa:[{n:'T1 — CISF Domestic'},{n:'T2 — International'},{n:'T2 — Domestic'},{n:'T2 Fast Track'}],
+    parking:[{n:'T2 Multilevel',d:'T2 walkway',tot:1800,pr:'₹250/day',walkMin:6},{n:'T1 Parking',d:'T1 direct',tot:1000,pr:'₹180/day',walkMin:5},{n:'Economy Lot',d:'Shuttle 15min',tot:4000,pr:'₹100/day',walkMin:18}],
+    food:[{n:'Mumbai Masala',loc:'T2 Departures',e:'🍛'},{n:'The Rolling Pin',loc:'T2',e:'🥐'},{n:'McDonald\'s',loc:'T1/T2',e:'🍔'},{n:'Starbucks',loc:'T2',e:'☕'}],
+    ride:[{n:'Uber / Ola',loc:'T1 & T2 Arrivals',e:'🚙'},{n:'Prepaid Taxi',loc:'Arrivals rank',e:'🚕'},{n:'Meru Cabs',loc:'Arrivals — designated bay',e:'🚕'}],
+    busy:[16,13,11,9,12,23,46,70,80,82,80,76,78,84,80,78,82,86,80,66,52,40,30,20],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['T2']},
+
+  JNB:{name:'O.R. Tambo International',icao:'FAOR',lat:-26.1392,lon:28.2460,city:'Johannesburg',timezone:'Africa/Johannesburg',
+    terminals:['A','B','C'],
+    terminalWalkMin:{A:10,B:12,C:16},
+    tsa:[{n:'Terminal A'},{n:'Terminal B'},{n:'International C'},{n:'Domestic Fast Track'}],
+    parking:[{n:'P1 Blue — T1',d:'T1 walkway',tot:1200,pr:'ZAR 160/day',walkMin:5},{n:'P4 Red — Long Stay',d:'Shuttle 10min',tot:4000,pr:'ZAR 60/day',walkMin:16},{n:'P3 Yellow',d:'Shuttle 8min',tot:3000,pr:'ZAR 100/day',walkMin:14}],
+    food:[{n:'Marble Restaurant',loc:'International Departures',e:'🥩'},{n:'Mugg & Bean',loc:'T1/T2',e:'☕'},{n:'Nando\'s',loc:'Domestic A',e:'🍗'},{n:'McDonald\'s',loc:'All terminals',e:'🍔'}],
+    ride:[{n:'Uber / Bolt',loc:'Arrivals — all terminals',e:'🚙'},{n:'Gautrain',loc:'Underground station',e:'🚆'},{n:'SA Taxi',loc:'Arrivals rank',e:'🚕'}],
+    busy:[13,10,8,7,9,20,42,66,78,80,78,74,76,80,78,76,80,84,76,62,48,34,24,15],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['C']},
+
+  CPT:{name:'Cape Town International',icao:'FACT',lat:-33.9648,lon:18.6017,city:'Cape Town',timezone:'Africa/Johannesburg',
+    terminals:['Domestic','International'],
+    terminalWalkMin:{Domestic:8,International:12},
+    tsa:[{n:'Domestic — Security'},{n:'International — Security'},{n:'Domestic Fast Track'},{n:'International Premium'}],
+    parking:[{n:'Short Stay P1',d:'Terminal walkway',tot:800,pr:'ZAR 120/day',walkMin:4},{n:'Long Stay P2',d:'Shuttle 8min',tot:3000,pr:'ZAR 50/day',walkMin:14},{n:'Economy P3',d:'Shuttle 12min',tot:4000,pr:'ZAR 35/day',walkMin:18}],
+    food:[{n:'Vida e Caffè',loc:'Domestic Departures',e:'☕'},{n:'Primi Piatti',loc:'International',e:'🍝'},{n:'Burger King',loc:'Domestic',e:'🍔'},{n:'Woolworths Café',loc:'International',e:'🥗'}],
+    ride:[{n:'Uber / Bolt',loc:'Arrivals — both terminals',e:'🚙'},{n:'Intercape Bus',loc:'Arrivals Hall',e:'🚌'},{n:'SA Taxi',loc:'Arrivals rank',e:'🚕'}],
+    busy:[11,8,6,5,8,18,38,60,72,76,74,70,72,76,74,72,76,80,74,60,46,32,22,13],
+    parkingWalkMin:7,checkinCounters:true,intlTerminals:['International']},
+
+  MEL:{name:'Melbourne Airport',icao:'YMML',lat:-37.6690,lon:144.8410,city:'Melbourne',timezone:'Australia/Melbourne',
+    terminals:['T1','T2','T3','T4'],
+    terminalWalkMin:{T1:12,T2:10,T3:8,T4:10},
+    tsa:[{n:'T1 — International'},{n:'T2 — Qantas Domestic'},{n:'T3 — Jetstar'},{n:'T4 — Virgin'}],
+    parking:[{n:'P2 Short Stay',d:'T1 walkway',tot:1200,pr:'A$40/day',walkMin:5},{n:'P9 Long Stay',d:'Free shuttle',tot:4000,pr:'A$22/day',walkMin:15},{n:'P1 Express',d:'Covered walkway',tot:800,pr:'A$52/day',walkMin:4}],
+    food:[{n:'Andrew\'s Hamburgers',loc:'T2 Airside',e:'🍔'},{n:'Movida',loc:'T1 International',e:'🥘'},{n:'Huxtaburger',loc:'T4',e:'🍔'},{n:'Seven Seeds Coffee',loc:'T2/T3',e:'☕'}],
+    ride:[{n:'Uber / DiDi',loc:'T1/T2/T3/T4 Arrivals',e:'🚙'},{n:'SkyBus',loc:'T1/T2/T4 stops',e:'🚌'},{n:'Silver Top Taxi',loc:'Taxi rank all terminals',e:'🚕'}],
+    busy:[13,10,8,7,9,20,42,64,76,78,74,70,72,78,78,74,78,82,74,60,46,32,22,14],
+    parkingWalkMin:8,checkinCounters:true,intlTerminals:['T1']},
+
+  IST:{name:'Istanbul Airport',icao:'LTFM',lat:41.2608,lon:28.7418,city:'Istanbul',timezone:'Europe/Istanbul',
+    terminals:['1'],
+    terminalWalkMin:{1:16},
+    tsa:[{n:'International Security A'},{n:'International Security B'},{n:'Domestic Security'},{n:'Fast Track — Business'}],
+    parking:[{n:'P1 Short Stay',d:'Terminal walkway',tot:2500,pr:'₺120/day',walkMin:6},{n:'P2 Long Stay',d:'Shuttle 8min',tot:6000,pr:'₺60/day',walkMin:16},{n:'Valet',d:'Drop-off',tot:500,pr:'₺200/day',walkMin:3}],
+    food:[{n:'Simit Sarayı',loc:'Departures Level 3',e:'🥨'},{n:'Burger King',loc:'International Pier',e:'🍔'},{n:'Kahve Dünyası',loc:'All zones',e:'☕'},{n:'Pide & Lahmacun',loc:'Domestic',e:'🫓'}],
+    ride:[{n:'Uber / BiTaksi',loc:'Arrivals — designated bays',e:'🚙'},{n:'Havaist Bus',loc:'Arrivals Hall exits',e:'🚌'},{n:'Istanbul Taxi',loc:'Taxi rank',e:'🚕'}],
+    busy:[20,17,15,13,16,28,54,76,84,84,80,76,80,84,82,80,84,88,82,70,58,46,36,26],
+    parkingWalkMin:10,checkinCounters:true,intlTerminals:['1']}
+
+};
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let cur = 'LAX';
+let flightTab = 'arr';
+let flightCache = {arr:[],dep:[]};
+let modalCtx = null;
+let plannerInterval = null;
+let cachedWxData = null;
+// Speed unit: 'kt' | 'mph' | 'kmh'
+let speedUnit = 'kt';
+
+function cycleSpeedUnit() {
+  const units = ['kt','mph','kmh'];
+  speedUnit = units[(units.indexOf(speedUnit)+1) % units.length];
+  const labels = {kt:'kt', mph:'mph', kmh:'km/h'};
+  document.getElementById('unit-btn').textContent = labels[speedUnit];
+  // Re-render planes with new unit if data already shown
+  renderPlanes();
+}
+
+function fmtSpeed(gs) {
+  if (!gs) return '—';
+  const labels = {kt:'kt', mph:'mph', kmh:'km/h'};
+  const values = {kt: gs, mph: gs * 1.15078, kmh: gs * 1.852};
+  return Math.round(values[speedUnit]) + ' ' + labels[speedUnit];
+}
+
+// ══════════════════════════════════════
+// STORAGE
+// ══════════════════════════════════════
+const EXPIRY_MS = 2 * 60 * 60 * 1000;
+
+async function storeReport(type, apCode, itemKey, waitMin) {
+  const storageKey = `report:${apCode}:${type}:${itemKey}`;
+  let existing = [];
+  try { const r = await window.storage.get(storageKey); if (r) existing = JSON.parse(r.value); } catch(e){}
+  const now = Date.now();
+  existing = existing.filter(r => now - r.ts < EXPIRY_MS);
+  existing.unshift({wait: waitMin, ts: now});
+  existing = existing.slice(0, 20);
+  await window.storage.set(storageKey, JSON.stringify(existing));
+}
+
+async function getReports(type, apCode, itemKey) {
+  const storageKey = `report:${apCode}:${type}:${itemKey}`;
+  try {
+    const r = await window.storage.get(storageKey);
+    if (!r) return [];
+    const now = Date.now();
+    return JSON.parse(r.value).filter(r => now - r.ts < EXPIRY_MS);
+  } catch(e) { return []; }
+}
+
+async function getAllRecentReports(type, apCode, items) {
+  const results = {};
+  await Promise.all(items.map(async (key) => { results[key] = await getReports(type, apCode, key); }));
+  return results;
+}
+
+function crowdAvg(reports) {
+  if (!reports || !reports.length) return null;
+  return Math.round(reports.reduce((s,r)=>s+r.wait,0)/reports.length);
+}
+
+function timeAgo(ts) {
+  const d = Math.floor((Date.now()-ts)/1000);
+  if (d < 60) return d+'s ago';
+  if (d < 3600) return Math.floor(d/60)+'m ago';
+  return Math.floor(d/3600)+'h ago';
+}
+
+// ══════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════
+function wc(v,max){const p=v/max;return p<.35?['cg','fg']:p<.67?['cy','fy']:['cr','fr']}
+function rng(seed){let s=seed;return()=>{s=(s*9301+49297)%233280;return s/233280}}
+function tsaEst(idx){
+  const h=new Date().getHours();
+  const base=[5,5,6,6,7,8,20,35,30,28,22,20,22,28,30,28,30,38,30,22,15,10,8,6][h];
+  const r=rng(idx*100+h+new Date().getDay()*7);return Math.max(2,Math.round(base*(0.7+r()*.6)));
+}
+function parkEst(idx,tot){
+  const h=new Date().getHours();
+  const bf=[.3,.3,.3,.3,.3,.35,.5,.6,.65,.65,.6,.55,.6,.65,.65,.62,.65,.7,.65,.55,.45,.38,.35,.32][h];
+  const r=rng(idx*50+h);const f=bf*(0.8+r()*.4);
+  return Math.max(10,Math.round(tot*(1-Math.min(.95,f))));
+}
+function svcEst(bMin,bMax){
+  const h=new Date().getHours();
+  const f=[.3,.3,.3,.3,.3,.4,.6,.8,.9,.8,.75,.8,.9,.85,.8,.75,.8,.95,.9,.75,.6,.45,.35,.3][h];
+  return Math.max(1,Math.round(bMin+(bMax-bMin)*f));
+}
+function fmt12(h,m){const ampm=h<12?'AM':'PM';const hh=h%12||12;return `${hh}:${String(m).padStart(2,'0')} ${ampm}`}
+function addMin(date,min){return new Date(date.getTime()+min*60000)}
+function fmtTime(date){return fmt12(date.getHours(),date.getMinutes())}
+
+// ══════════════════════════════════════
+// LIVE TSA WAIT (from crowdsource)
+// ══════════════════════════════════════
+async function getLiveTSAWait(apCode) {
+  const ap = APS[apCode];
+  const keys = ap.tsa.map((_,i)=>`tsa_${i}`);
+  const allReports = await getAllRecentReports('tsa', apCode, keys);
+  let totalWait = 0;
+  let count = 0;
+  ap.tsa.forEach((_,i) => {
+    const reports = allReports[`tsa_${i}`]||[];
+    const crowdWait = crowdAvg(reports);
+    const estWait = tsaEst(i);
+    totalWait += (crowdWait !== null ? crowdWait : estWait);
+    count++;
+  });
+  return count > 0 ? Math.round(totalWait/count) : tsaEst(0);
+}
+
+// ══════════════════════════════════════
+// WEATHER DELAY RISK
+// ══════════════════════════════════════
+function getWeatherDelayRisk() {
+  if (!cachedWxData) return {risk:0, reason:'Weather data loading'};
+  const {weatherCode, windSpeed, visibility} = cachedWxData;
+  let risk = 0;
+  let reasons = [];
+  if ([95,96,99].includes(weatherCode)) { risk += 40; reasons.push('Thunderstorms'); }
+  else if ([61,63,65,80,81,82].includes(weatherCode)) { risk += 20; reasons.push('Rain'); }
+  else if ([71,73,75,77].includes(weatherCode)) { risk += 35; reasons.push('Snow/Ice'); }
+  else if ([45,48].includes(weatherCode)) { risk += 25; reasons.push('Fog'); }
+  if (windSpeed > 35) { risk += 25; reasons.push(`High winds ${Math.round(windSpeed)}mph`); }
+  else if (windSpeed > 25) { risk += 10; reasons.push(`Strong winds`); }
+  if (visibility < 3) { risk += 20; reasons.push('Low visibility'); }
+  return {risk: Math.min(100, risk), reason: reasons.join(', ') || 'Clear conditions'};
+}
+
+// ══════════════════════════════════════
+// AIRPORT BUSYNESS AT DEPARTURE TIME
+// ══════════════════════════════════════
+function getBusynessAt(apCode, flightHour) {
+  const ap = APS[apCode];
+  // Look 2hrs before flight for peak load
+  const checkHour = Math.max(0, flightHour - 2);
+  return ap.busy[checkHour] || 50;
+}
+
+// ══════════════════════════════════════
+// PREDICTIVE DEPARTURE CALCULATOR
+// ══════════════════════════════════════
+async function calculateDeparture() {
+  const ap = APS[cur];
+  const flightTimeStr = document.getElementById('p-flight-time').value;
+  const driveMin = parseInt(document.getElementById('p-drive').value) || 30;
+  const bags = parseInt(document.getElementById('p-bags').value);
+  const tsaType = document.getElementById('p-tsa').value;
+  const terminal = document.getElementById('p-terminal').value;
+
+  if (!flightTimeStr) { alert('Please enter your flight time.'); return; }
+
+  const [flH, flM] = flightTimeStr.split(':').map(Number);
+  const now = new Date();
+  const flightDate = new Date(now);
+  flightDate.setHours(flH, flM, 0, 0);
+  if (flightDate < now) flightDate.setDate(flightDate.getDate()+1);
+
+  // Show loading
+  document.getElementById('planner-result').style.display = 'block';
+  document.getElementById('p-timeline').innerHTML = '<div class="loader"><span class="spin-anim">↻</span> Calculating with live data…</div>';
+  document.getElementById('p-windows').innerHTML = '';
+  document.getElementById('p-risks').innerHTML = '';
+
+  // Gather live data
+  const liveTSA = await getLiveTSAWait(cur);
+  const wxRisk = getWeatherDelayRisk();
+  const busyness = getBusynessAt(cur, flH);
+
+  // Time components (all in minutes)
+  const walkToTerminal = ap.terminalWalkMin[terminal] || 10;
+  const parkingWalk = ap.parkingWalkMin || 8;
+  
+  // TSA wait adjusted for pass type
+  let tsaWait = liveTSA;
+  if (tsaType === 'precheck') tsaWait = Math.max(3, Math.round(tsaWait * 0.35));
+  else if (tsaType === 'clear') tsaWait = Math.max(2, Math.round(tsaWait * 0.15));
+
+  // Bag drop if checked
+  const bagDropMin = bags > 0 ? (bags * 5 + 10) : 0;
+
+  // Gate buffer (boarding typically closes 15-20min before)
+  const gateBufferMin = 20;
+  // Walk from security to gate
+  const gateWalkMin = walkToTerminal;
+
+  // Busyness multiplier (crowded airport = more time needed)
+  const busynessMultiplier = busyness > 70 ? 1.3 : busyness > 50 ? 1.15 : 1.0;
+
+  // Extra fields from expanded planner
+  const travelers = parseInt(document.getElementById('p-travelers')?.value || '1');
+  const comfort   = document.getElementById('p-comfort')?.value || 'normal';
+  const lounge    = document.getElementById('p-lounge')?.value || 'no';
+  const mobility  = document.getElementById('p-mobility')?.value || 'none';
+  const transport = document.getElementById('p-transport')?.value || 'drive';
+
+  // Adjust for group size
+  const groupBuffer = travelers >= 5 ? 20 : travelers >= 3 ? 10 : travelers >= 2 ? 5 : 0;
+  // Adjust for comfort preference
+  const comfortBuffer = comfort === 'relaxed' ? 25 : comfort === 'tight' ? -15 : 0;
+  // Lounge adds time at airport but removes gate anxiety
+  const loungeBuffer = lounge === 'yes' ? 30 : 0;
+  // Mobility assistance adds time
+  const mobilityBuffer = mobility === 'wheelchair' ? 25 : mobility === 'extra' ? 15 : 0;
+  // Rideshare / transit saves parking walk but may add wait
+  const transportBuffer = transport === 'rideshare' ? -parkingWalk + 5 : transport === 'transit' ? 5 : transport === 'dropoff' ? -parkingWalk : 0;
+
+  // Weather buffer
+  const wxBuffer = wxRisk.risk > 30 ? 20 : wxRisk.risk > 10 ? 10 : 0;
+
+  // Core time needed AT airport before flight departs
+  const atAirportMin = Math.round(
+    (parkingWalk + bagDropMin + tsaWait + gateWalkMin + gateBufferMin) * busynessMultiplier
+  ) + wxBuffer + groupBuffer + comfortBuffer + loungeBuffer + mobilityBuffer + transportBuffer;
+
+  // Total time from home to gate
+  const totalMin = driveMin + atAirportMin;
+
+  // Build timeline
+  const departHome = addMin(flightDate, -totalMin);
+  const arriveAirport = addMin(departHome, driveMin);
+  const afterParking = addMin(arriveAirport, parkingWalk);
+  const afterBagDrop = addMin(afterParking, bagDropMin);
+  const afterTSA = addMin(afterBagDrop, tsaWait);
+  const atGate = addMin(afterTSA, gateWalkMin);
+  const boardingClose = addMin(flightDate, -gateBufferMin);
+
+  // Risk factors
+  const bufferMin = Math.round((atGate - boardingClose.getTime() + gateBufferMin*60000) / 60000);
+  const missRisk = bufferMin < 0 ? 90 : bufferMin < 10 ? 65 : bufferMin < 25 ? 30 : bufferMin < 45 ? 15 : 5;
+
+  // Build timeline HTML
+  const tlItems = [
+    {time: fmtTime(departHome), step: 'Leave home', detail: `${driveMin} min drive to ${ap.name.split(' ').slice(0,2).join(' ')}`, dot: missRisk > 50 ? 'warn' : 'go'},
+    {time: fmtTime(arriveAirport), step: 'Arrive airport', detail: `Walk to terminal ${terminal} — ${parkingWalk} min from parking`, dot:'info'},
+    bags > 0 ? {time: fmtTime(afterParking), step: 'Bag drop / check-in', detail: `${bags} bag${bags>1?'s':''} · estimated ${bagDropMin} min wait at counter`, dot:'info'} : null,
+    {time: fmtTime(afterBagDrop), step: 'TSA security', detail: `<strong>${tsaWait} min</strong> estimated wait (${tsaType==='standard'?'standard lane':tsaType==='precheck'?'PreCheck lane':'CLEAR + PreCheck'}) · live crowdsource data`, dot: tsaWait > 30 ? 'crit' : tsaWait > 15 ? 'warn' : 'go'},
+    {time: fmtTime(afterTSA), step: `Walk to gate — Terminal ${terminal}`, detail: `${gateWalkMin} min to gate area from security`, dot:'info'},
+    {time: fmtTime(boardingClose), step: 'Boarding closes', detail: `Must be at gate by this time`, dot:'crit'},
+    {time: fmtTime(flightDate), step: 'Scheduled departure', detail: `${ap.name}`, dot:'done'},
+  ].filter(Boolean);
+
+  document.getElementById('p-timeline').innerHTML = tlItems.map((item, i) => `
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot ${item.dot}"></div>
+        ${i < tlItems.length-1 ? '<div class="tl-line"></div>' : ''}
+      </div>
+      <div class="tl-right">
+        <div class="tl-time">${item.time}</div>
+        <div class="tl-step">${item.step}</div>
+        <div class="tl-detail">${item.detail}</div>
+      </div>
+    </div>`).join('');
+
+  // Departure windows
+  const windows = [
+    {label:'Comfortable', offset: 0, type:'best', bufferDesc:`+${Math.max(0,bufferMin+20)} min buffer`},
+    {label:'Standard', offset: 20, type:'ok', bufferDesc:`+${Math.max(0,bufferMin)} min buffer`},
+    {label:'Tight', offset: 40, type:'tight', bufferDesc: bufferMin - 20 < 0 ? '⚠ Risky' : `+${Math.max(0,bufferMin-20)} min buffer`},
+  ];
+
+  document.getElementById('p-windows').innerHTML = windows.map(w => {
+    const wTime = addMin(departHome, -w.offset);
+    const [wcc] = w.type === 'best' ? ['cg'] : w.type === 'ok' ? ['cy'] : ['cr'];
+    return `<div class="win-card ${w.type}">
+      <div class="win-time ${wcc}">${fmtTime(wTime)}</div>
+      <div class="win-label">${w.label}</div>
+      <div class="win-detail ${wcc}">${w.bufferDesc}</div>
+    </div>`;
+  }).join('');
+
+  // Risk rows
+  const risks = [
+    {label:'TSA wait', val: Math.min(100, Math.round(tsaWait/60*100)), color: tsaWait>30?'var(--red)':tsaWait>15?'var(--yellow)':'var(--green)', txt: tsaWait+' min'},
+    {label:'Airport busy', val: busyness, color: busyness>70?'var(--red)':busyness>50?'var(--yellow)':'var(--green)', txt: busyness+'%'},
+    {label:'Weather risk', val: wxRisk.risk, color: wxRisk.risk>30?'var(--red)':wxRisk.risk>10?'var(--yellow)':'var(--green)', txt: wxRisk.reason},
+    {label:'Miss flight', val: missRisk, color: missRisk>50?'var(--red)':missRisk>25?'var(--yellow)':'var(--green)', txt: missRisk+'% risk'},
+  ];
+
+  document.getElementById('p-risks').innerHTML = risks.map(r => `
+    <div class="risk-row">
+      <div class="risk-label">${r.label}</div>
+      <div class="risk-bar-wrap"><div class="risk-bar" style="width:${r.val}%;background:${r.color}"></div></div>
+      <div class="risk-val" style="color:${r.color}">${r.txt}</div>
+    </div>`).join('');
+
+  document.getElementById('p-last-calc').textContent = 'Updated ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+
+// Auto-recalculate planner every 60s if visible
+function startPlannerAutoRefresh() {
+  if (plannerInterval) clearInterval(plannerInterval);
+  plannerInterval = setInterval(async () => {
+    if (document.getElementById('planner-result').style.display !== 'none') {
+      await calculateDeparture();
+    }
+  }, 60000);
+}
+
+// Populate terminal select
+function populateTerminalSelect() {
+  const ap = APS[cur];
+  const sel = document.getElementById('p-terminal');
+  sel.innerHTML = ap.terminals.map(t => `<option value="${t}">Terminal ${t}</option>`).join('');
+}
+
+// ══════════════════════════════════════
+// MODAL
+// ══════════════════════════════════════
+function openModal(type, key, name, unit='minutes', max=90, quickVals=[2,5,10,20,30,45,60]) {
+  modalCtx = {type, key, name, unit, max};
+  document.getElementById('modal-title').textContent = `Report: ${name}`;
+  document.getElementById('modal-sub').textContent = type==='parking' ? 'How many spots are available?' : `What's the current wait in ${unit}?`;
+  const slider = document.getElementById('wait-slider');
+  slider.max = max;
+  slider.value = type==='parking' ? Math.round(max*0.3) : 5;
+  onSlider(slider.value);
+  document.getElementById('quick-btns').innerHTML = quickVals.map(v=>`<button class="qb" onclick="setSlider(${v})">${v}${unit==='minutes'?'min':''}</button>`).join('');
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');modalCtx=null}
+function onSlider(v){
+  v=parseInt(v);
+  const d=document.getElementById('slider-display');
+  d.textContent=v;
+  const [cc]=wc(v,parseInt(document.getElementById('wait-slider').max));
+  d.className='slider-val '+cc;
+  document.querySelectorAll('.qb').forEach(b=>b.classList.toggle('active',parseInt(b.textContent)===v));
+}
+function setSlider(v){document.getElementById('wait-slider').value=v;onSlider(v)}
+async function submitReport() {
+  if (!modalCtx) return;
+  const wait = parseInt(document.getElementById('wait-slider').value);
+  await storeReport(modalCtx.type, cur, modalCtx.key, wait);
+  closeModal();
+  showToast('✓ Report submitted — thanks!');
+  if (modalCtx.type==='tsa') renderTSA();
+  else if (modalCtx.type==='parking') renderParking();
+  else if (modalCtx.type==='food'||modalCtx.type==='ride') renderServices();
+}
+function showToast(msg) {
+  const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';
+  setTimeout(()=>{t.style.display='none'},2800);
+}
+
+// ══════════════════════════════════════
+// RENDER: WEATHER
+// ══════════════════════════════════════
+async function renderWeather() {
+  document.getElementById('wx').innerHTML=`<div class="loader"><span class="spin-anim">↻</span> Loading…</div>`;
+  const ap=APS[cur];
+  try {
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${ap.lat}&longitude=${ap.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,visibility&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`);
+    const d=await r.json();const c=d.current;
+    const icons={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌧️',61:'🌧️',71:'❄️',80:'🌦️',95:'⛈️'};
+    const descs={0:'Clear',1:'Mostly Clear',2:'Partly Cloudy',3:'Overcast',45:'Foggy',48:'Icy Fog',51:'Drizzle',61:'Rain',71:'Snow',80:'Showers',95:'Thunderstorm'};
+    const ic=icons[c.weather_code]||'🌡️';
+    const de=descs[c.weather_code]||'Variable';
+    const vis=c.visibility?(c.visibility/1609).toFixed(1)+' mi':'N/A';
+    cachedWxData = {weatherCode: c.weather_code, windSpeed: c.wind_speed_10m, visibility: c.visibility ? c.visibility/1609 : 10};
+    document.getElementById('wx').innerHTML=`
+      <div class="wx-big"><div class="wx-icon">${ic}</div>
+        <div class="wx-temp">${Math.round(c.temperature_2m)}°F</div>
+        <div class="wx-desc">${de}</div></div>
+      <div class="wx-grid">
+        <div class="wx-item"><div class="wx-val">💧</div><div class="wx-val" style="font-size:16px">${c.relative_humidity_2m}%</div><div class="wx-lbl">Humidity</div></div>
+        <div class="wx-item"><div class="wx-val">💨</div><div class="wx-val" style="font-size:16px">${Math.round(c.wind_speed_10m)}<span style="font-size:11px"> mph</span></div><div class="wx-lbl">Wind</div></div>
+        <div class="wx-item"><div class="wx-val">👁️</div><div class="wx-val" style="font-size:16px">${vis}</div><div class="wx-lbl">Visibility</div></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('wx').innerHTML=`<div class="err">⚠ Weather unavailable.</div>`;
+  }
+}
+
+// ══════════════════════════════════════
+// RENDER: PLANES
+// ══════════════════════════════════════
+function renderPlanesHTML(planes, source) {
+  if (!planes.length) {
+    document.getElementById('planes').innerHTML=`<div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);padding:24px;text-align:center;line-height:1.8">✈ No aircraft detected in nearby airspace.<br><span style="font-size:9px">Coverage depends on volunteer ADS-B receivers in the area.</span></div>`;
+    return;
+  }
+  document.getElementById('planes').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-family:var(--font-display);font-weight:800;font-size:20px">${planes.length}</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">aircraft nearby</span>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted)" id="plane-col-hdr">Call · Type · Alt · Spd</div>
+    </div>
+    <div class="plane-list">${planes.map(s=>{
+      const alt=typeof s.alt_baro==='number'?Math.round(s.alt_baro).toLocaleString()+' ft':'—';
+      const spd=fmtSpeed(s.gs);
+      const type=(s.t||s.type||'—').trim();
+      const call=(s.flight||s.r||'???').trim();
+      return`<div class="plane-row">
+        <div class="pcall">${call}</div>
+        <div class="pcountry" title="${type}">${type}</div>
+        <div class="pval">${alt}</div>
+        <div class="pval">${spd}</div>
+      </div>`;
+    }).join('')}</div>
+    <div style="font-family:var(--font-mono);font-size:8px;color:var(--muted);margin-top:8px;text-align:right">via ${source}</div>`;
+}
+
+async function fetchADS_B(ap) {
+  // Race both sources — use whichever responds first
+  const ctrl = new AbortController();
+  const sig = ctrl.signal;
+  const fetchSrc = async (url, label) => {
+    const r = await fetch(url, { signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : sig });
+    if (!r.ok) throw new Error(label + ' ' + r.status);
+    const d = await r.json();
+    return {
+      label,
+      planes: (d.ac || [])
+        .filter(s => s.alt_baro && s.alt_baro !== 'ground' && Number(s.alt_baro) > 0 && s.lat && s.lon)
+        .sort((a,b) => Number(b.alt_baro||0) - Number(a.alt_baro||0))
+        .slice(0, 12)
+    };
+  };
+  return Promise.any([
+    fetchSrc(`https://api.airplanes.live/v2/point/${ap.lat}/${ap.lon}/50`, 'airplanes.live'),
+    fetchSrc(`https://api.adsb.lol/v2/lat/${ap.lat}/lon/${ap.lon}/dist/30`, 'adsb.lol')
+  ]);
+}
+
+async function renderPlanes() {
+  document.getElementById('planes').innerHTML=`<div class="loader"><span class="spin-anim">↻</span> Scanning airspace…</div>`;
+  const ap = APS[cur];
+  try {
+    const { planes, label } = await fetchADS_B(ap);
+    renderPlanesHTML(planes, label);
+  } catch(e) {
+    document.getElementById('planes').innerHTML=`
+      <div style="text-align:center;padding:18px">
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:12px">
+          ✈ ADS-B temporarily unavailable<br>
+          <span style="font-size:9px">Requires volunteer receivers in range</span>
+        </div>
+        <button class="rpt-btn" onclick="renderPlanes()" style="margin:0 auto;display:block">↻ Retry</button>
+      </div>`;
+  }
+}
+
+// ══════════════════════════════════════
+// RENDER: FLIGHTS
+// ══════════════════════════════════════
+const AL=[['AA','American'],['UA','United'],['DL','Delta'],['WN','Southwest'],['B6','JetBlue'],['AS','Alaska'],['NK','Spirit'],['F9','Frontier'],['HA','Hawaiian'],['AC','Air Canada'],['BA','British Airways'],['LH','Lufthansa']];
+const CI=[['New York','JFK'],['Los Angeles','LAX'],['Chicago','ORD'],['Miami','MIA'],['Seattle','SEA'],['Denver','DEN'],['Boston','BOS'],['Dallas','DFW'],['Atlanta','ATL'],['Houston','IAH'],['Phoenix','PHX'],['Las Vegas','LAS'],['Orlando','MCO'],['San Francisco','SFO'],['Washington','DCA'],['London','LHR'],['Paris','CDG'],['Tokyo','NRT'],['Cancún','CUN'],['Toronto','YYZ']];
+const ST=['ontime','ontime','ontime','ontime','delayed','boarding','landed','scheduled'];
+function simFlights(code,mode){
+  const r=rng(code.charCodeAt(0)*100+mode.charCodeAt(0)*10+new Date().getHours());
+  const now=new Date();
+  return Array.from({length:8},(_,i)=>{
+    const al=AL[Math.floor(r()*AL.length)];const ci=CI[Math.floor(r()*CI.length)];
+    const off=Math.round((r()-.3)*120);const t=new Date(now.getTime()+off*60000+i*18*60000);
+    const stat=ST[Math.floor(r()*ST.length)];
+    return{num:`${al[0]}${Math.floor(r()*900)+100}`,airline:al[1],city:`${ci[0]} (${ci[1]})`,
+      time:`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`,status:stat,
+      delay:stat==='delayed'?'+'+Math.round(r()*50+10)+'m':null};
+  });
+}
+function renderFlights(){
+  if(!flightCache[flightTab].length) flightCache[flightTab]=simFlights(cur,flightTab);
+  const sm={ontime:'<span class="fsbadge fs-on">ON TIME</span>',boarding:'<span class="fsbadge fs-bo">BOARDING</span>',landed:'<span class="fsbadge fs-la">LANDED</span>',scheduled:'<span class="fsbadge fs-sc">SCHED</span>'};
+  document.getElementById('fl-list').innerHTML=flightCache[flightTab].map(f=>`
+    <div class="fl-row">
+      <div><div class="flnum">${f.num}</div><div class="flsub">${f.airline.split(' ')[0]}</div></div>
+      <div><div class="fldst">${f.city}</div><div class="flsub">${flightTab==='arr'?'Arriving':'Departing'}</div></div>
+      <div class="fltime">${f.time}</div>
+      ${f.status==='delayed'?`<span class="fsbadge fs-dl">DLY ${f.delay}</span>`:sm[f.status]||sm.scheduled}
+    </div>`).join('');
+}
+function setFTab(mode,btn){flightTab=mode;document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderFlights();}
+
+// ══════════════════════════════════════
+// RENDER: TSA
+// ══════════════════════════════════════
+async function renderTSA() {
+  const ap=APS[cur];
+  const keys=ap.tsa.map((_,i)=>`tsa_${i}`);
+  const allReports=await getAllRecentReports('tsa',cur,keys);
+  document.getElementById('tsa-content').innerHTML=ap.tsa.map((cp,i)=>{
+    const reports=allReports[`tsa_${i}`]||[];
+    const crowdWait=crowdAvg(reports);
+    const estWait=tsaEst(i);
+    const displayWait=crowdWait!==null?crowdWait:estWait;
+    const [cc,fc]=wc(displayWait,45);
+    const pct=Math.round((displayWait/45)*100);
+    const isCrowd=crowdWait!==null;
+    return`<div class="tsa-cp">
+      <div class="cp-name">${cp.n}</div>
+      <div class="wait-big ${cc}">${displayWait}<span style="font-size:12px;color:var(--muted)"> min</span></div>
+      <div style="font-family:var(--font-mono);font-size:9px;margin-top:2px" class="${isCrowd?'cg':''}">
+        ${isCrowd?`👥 ${reports.length} report${reports.length>1?'s':''}`:' estimated'}
+      </div>
+      <div class="sbar"><div class="sfill ${fc}" style="width:${pct}%"></div></div>
+      <div class="tsa-actions">
+        <div class="crowd-count">${isCrowd?timeAgo(reports[0].ts):''}</div>
+        <button class="rpt-btn" onclick="openModal('tsa','tsa_${i}','${cp.n}','minutes',60,[2,5,10,15,20,30,45])">+ Report</button>
+      </div>
+    </div>`;
+  }).join('');
+  const allReps=Object.entries(allReports).flatMap(([k,v])=>v.map(r=>({...r,checkpoint:ap.tsa[parseInt(k.split('_')[1])].n}))).sort((a,b)=>b.ts-a.ts).slice(0,4);
+  document.getElementById('tsa-feed').innerHTML=allReps.length?allReps.map(r=>`
+    <div class="feed-item"><div><div class="feed-loc">${r.checkpoint}</div><div class="feed-time">${timeAgo(r.ts)}</div></div><div class="feed-wait cg">${r.wait} min</div></div>`).join(''):`<div class="no-reports">No recent reports — be the first to share!</div>`;
+}
+
+// ══════════════════════════════════════
+// RENDER: PARKING
+// ══════════════════════════════════════
+async function renderParking() {
+  const ap=APS[cur];
+  const keys=ap.parking.map((_,i)=>`park_${i}`);
+  const allReports=await getAllRecentReports('parking',cur,keys);
+  document.getElementById('parking-content').innerHTML=ap.parking.map((p,i)=>{
+    const reports=allReports[`park_${i}`]||[];
+    const crowdAvail=crowdAvg(reports);
+    const estAvail=parkEst(i,p.tot);
+    const displayAvail=crowdAvail!==null?crowdAvail:estAvail;
+    const pct=Math.round((1-displayAvail/p.tot)*100);
+    const [cc,fc]=wc(pct,100);
+    const isCrowd=crowdAvail!==null;
+    return`<div class="park-row">
+      <div class="park-l">
+        <div class="park-name">${p.n}</div>
+        <div class="park-detail">${p.d} · ${p.pr}</div>
+        <div style="font-family:var(--font-mono);font-size:9px;margin-top:2px" class="${isCrowd?'cg':''}">
+          ${isCrowd?`👥 ${reports.length} report${reports.length>1?'s':''} · ${timeAgo(reports[0].ts)}`:' estimated'}
+        </div>
+      </div>
+      <div class="park-r">
+        <div>
+          <div class="park-spots ${cc}">${displayAvail.toLocaleString()}</div>
+          <div class="park-sub">of ${p.tot.toLocaleString()} avail</div>
+          <div class="mini-bar"><div class="mini-fill ${fc}" style="width:${pct}%"></div></div>
+        </div>
+        <button class="rpt-btn" onclick="openModal('parking','park_${i}','${p.n}','spots',${p.tot},[10,50,100,200,400,600,1000])">+ Report</button>
+      </div>
+    </div>`;
+  }).join('');
+  const allReps=Object.entries(allReports).flatMap(([k,v])=>v.map(r=>({...r,lot:ap.parking[parseInt(k.split('_')[1])].n}))).sort((a,b)=>b.ts-a.ts).slice(0,3);
+  document.getElementById('parking-feed').innerHTML=allReps.length?allReps.map(r=>`
+    <div class="feed-item"><div><div class="feed-loc">${r.lot}</div><div class="feed-time">${timeAgo(r.ts)}</div></div><div class="feed-wait cg">${r.wait.toLocaleString()} spots</div></div>`).join(''):`<div class="no-reports">No recent reports — be the first to share!</div>`;
+}
+
+// ══════════════════════════════════════
+// RENDER: SERVICES
+// ══════════════════════════════════════
+async function renderServices() {
+  const ap=APS[cur];
+  const foodKeys=ap.food.map((_,i)=>`food_${i}`);
+  const rideKeys=ap.ride.map((_,i)=>`ride_${i}`);
+  const foodReps=await getAllRecentReports('food',cur,foodKeys);
+  const rideReps=await getAllRecentReports('ride',cur,rideKeys);
+  document.getElementById('food-content').innerHTML=ap.food.map((f,i)=>{
+    const reps=foodReps[`food_${i}`]||[];const crowdW=crowdAvg(reps);const estW=svcEst(2,20);const wait=crowdW!==null?crowdW:estW;const [cc]=wc(wait,25);const isCrowd=crowdW!==null;
+    return`<div class="svc-row"><div class="svc-l"><span class="svc-e">${f.e}</span><div><div class="svc-name">${f.n}</div><div class="svc-loc">${f.loc}${isCrowd?` · <span class="cg">👥 ${reps.length}</span>`:''}</div></div></div>
+      <div style="display:flex;align-items:center;gap:6px"><div class="svc-wait ${cc}">${wait}m</div><button class="rpt-btn" onclick="openModal('food','food_${i}','${f.n} line','minutes',45,[1,3,5,10,15,20,30])">+</button></div></div>`;
+  }).join('');
+  document.getElementById('ride-content').innerHTML=ap.ride.map((r,i)=>{
+    const reps=rideReps[`ride_${i}`]||[];const crowdW=crowdAvg(reps);const estW=svcEst(1,18);const wait=crowdW!==null?crowdW:estW;const [cc]=wc(wait,20);const isCrowd=crowdW!==null;
+    return`<div class="svc-row"><div class="svc-l"><span class="svc-e">${r.e}</span><div><div class="svc-name">${r.n}</div><div class="svc-loc">${r.loc}${isCrowd?` · <span class="cg">👥 ${reps.length}</span>`:''}</div></div></div>
+      <div style="display:flex;align-items:center;gap:6px"><div class="svc-wait ${cc}">${wait}m</div><button class="rpt-btn" onclick="openModal('ride','ride_${i}','${r.n} wait','minutes',40,[1,3,5,10,15,20,30])">+</button></div></div>`;
+  }).join('');
+  const allReps=[
+    ...Object.entries(foodReps).flatMap(([k,v])=>v.map(r=>({...r,label:`🍽 ${ap.food[parseInt(k.split('_')[1])].n}`}))),
+    ...Object.entries(rideReps).flatMap(([k,v])=>v.map(r=>({...r,label:`🚗 ${ap.ride[parseInt(k.split('_')[1])].n}`})))
+  ].sort((a,b)=>b.ts-a.ts).slice(0,5);
+  document.getElementById('svc-feed').innerHTML=allReps.length?allReps.map(r=>`
+    <div class="feed-item"><div><div class="feed-loc">${r.label}</div><div class="feed-time">${timeAgo(r.ts)}</div></div><div class="feed-wait cg">${r.wait} min</div></div>`).join(''):`<div class="no-reports">No recent reports — be the first to share!</div>`;
+}
+
+// ══════════════════════════════════════
+// RENDER: CONGESTION
+// ══════════════════════════════════════
+function renderCongestion() {
+  const ap=APS[cur];const h=new Date().getHours();
+  const r=rng(h*13+cur.charCodeAt(0));
+  const lvls=ap.terminals.map(()=>{const v=r();return v<.35?'low':v<.7?'med':'high'});
+  const lbl={low:'Light',med:'Moderate',high:'Crowded'};
+  document.getElementById('cong-content').innerHTML=ap.terminals.map((t,i)=>`
+    <div class="cong-block ${lvls[i]}">
+      <div class="cong-l">${t}</div>
+      <div class="cong-n">Terminal ${t}</div>
+      <div class="cong-v lv-${lvls[i]}">${lbl[lvls[i]]}</div>
+    </div>`).join('');
+  const crowded=ap.terminals.filter((_,i)=>lvls[i]==='high');
+  const light=ap.terminals.filter((_,i)=>lvls[i]==='low');
+  document.getElementById('cong-insight').innerHTML=crowded.length&&light.length
+    ?`<strong>Terminal ${crowded[0]}</strong> is very crowded. Consider routing through <strong>Terminal ${light[0]}</strong> for lighter traffic.`
+    :crowded.length?`<strong>Multiple terminals</strong> are crowded. Allow extra transit time.`
+    :`<strong>All terminals</strong> reporting light to moderate traffic.`;
+}
+
+// ══════════════════════════════════════
+// RENDER: BUSYNESS
+// ══════════════════════════════════════
+function renderBusyness() {
+  const ap=APS[cur];const now=new Date();const h=now.getHours();
+  const lbls=['12a','1','2','3','4','5','6','7','8','9','10','11','12p','1','2','3','4','5','6','7','8','9','10','11'];
+  document.getElementById('busyness-chart').innerHTML=ap.busy.map((v,i)=>{
+    const isNow=i===h;
+    const clr=isNow?'var(--accent)':v<40?'var(--green)':v<70?'var(--yellow)':'var(--red)';
+    return`<div class="chart-col">
+      <div class="chart-bar${isNow?' now':''}" style="height:${v}%;background:${clr};opacity:${isNow?1:.38}"></div>
+      <div class="chart-lbl${isNow?' now':''}">${lbls[i]}</div>
+    </div>`;
+  }).join('');
+  const cur2=ap.busy[h];
+  const nextLow=ap.busy.findIndex((v,i)=>i>h&&v<40);
+  let ins='';
+  if(cur2>70){ins=`Airport is <strong>very busy</strong> right now (${Math.round(cur2)}% capacity).`;if(nextLow>0)ins+=` Lighter crowds expected around <strong>${nextLow>=13?nextLow-12+'pm':nextLow===12?'12pm':nextLow+'am'}</strong>.`}
+  else if(cur2>40)ins=`<strong>Moderate traffic</strong> (${Math.round(cur2)}% capacity). Good time to move between terminals.`;
+  else ins=`Airport is <strong>quiet</strong> right now (${Math.round(cur2)}% capacity). Minimal waits expected.`;
+  document.getElementById('busy-insight').innerHTML=ins;
+  document.getElementById('time-lbl').textContent=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+
+// ══════════════════════════════════════
+// AIRPORT SEARCH
+// ══════════════════════════════════════
+// Build a flat searchable list from APS
+const AP_LIST = Object.entries(APS).map(([code,ap])=>({code,name:ap.name,city:ap.city,icao:ap.icao}));
+
+let dropFocusIdx = -1;
+
+function apMatchScore(ap, q) {
+  const s = q.toUpperCase();
+  const n = ap.name.toUpperCase();
+  const ci = ap.city.toUpperCase();
+  const co = ap.code;
+  const ic = ap.icao;
+  if (co === s || ic === s) return 100;
+  if (co.startsWith(s)) return 90;
+  if (ci.startsWith(s)) return 80;
+  if (n.includes(s) || ci.includes(s) || co.includes(s)) return 60;
+  return 0;
+}
+
+function onApSearch(val) {
+  document.getElementById('ap-clear').style.display = val ? 'block' : 'none';
+  dropFocusIdx = -1;
+  if (!val.trim()) { renderDropdownDefault(); return; }
+  const q = val.trim();
+  const results = AP_LIST
+    .map(ap => ({ap, score: apMatchScore(ap, q)}))
+    .filter(x => x.score > 0)
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 8)
+    .map(x => x.ap);
+  const dd = document.getElementById('ap-dropdown');
+  if (!results.length) {
+    dd.innerHTML = `<div class="ap-drop-empty">No airports found for "${q}"</div>`;
+    dd.classList.add('open'); return;
+  }
+  dd.innerHTML = `<div class="ap-drop-section"><div class="ap-drop-label">Results</div>${
+    results.map((ap,i)=>`<div class="ap-drop-item" data-code="${ap.code}" onclick="pickDropdown('${ap.code}')">
+      <span class="ap-drop-code">${ap.code}</span>
+      <span class="ap-drop-name">${ap.name}</span>
+      <span class="ap-drop-city">${ap.city}</span>
+    </div>`).join('')
+  }</div>`;
+  dd.classList.add('open');
+}
+
+function renderDropdownDefault() {
+  const popular = ['LAX','JFK','ORD','ATL','DFW','SFO','IAD','MIA','LHR','NRT','DXB','SYD'];
+  const dd = document.getElementById('ap-dropdown');
+  dd.innerHTML = `<div class="ap-drop-section">
+    <div class="ap-drop-label">All Airports</div>
+    ${AP_LIST.map(ap=>`<div class="ap-drop-item" data-code="${ap.code}" onclick="pickDropdown('${ap.code}')">
+      <span class="ap-drop-code">${ap.code}</span>
+      <span class="ap-drop-name">${ap.name}</span>
+      <span class="ap-drop-city">${ap.city}</span>
+    </div>`).join('')}
+  </div>`;
+  dd.classList.add('open');
+}
+
+function openDropdown() {
+  const val = document.getElementById('ap-search').value;
+  if (val.trim()) onApSearch(val);
+  else renderDropdownDefault();
+}
+
+function onApSearchKey(e) {
+  const dd = document.getElementById('ap-dropdown');
+  const items = dd.querySelectorAll('.ap-drop-item');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    dropFocusIdx = Math.min(dropFocusIdx+1, items.length-1);
+    items.forEach((el,i)=>el.classList.toggle('focused',i===dropFocusIdx));
+    items[dropFocusIdx]?.scrollIntoView({block:'nearest'});
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    dropFocusIdx = Math.max(dropFocusIdx-1, 0);
+    items.forEach((el,i)=>el.classList.toggle('focused',i===dropFocusIdx));
+    items[dropFocusIdx]?.scrollIntoView({block:'nearest'});
+  } else if (e.key === 'Enter') {
+    if (dropFocusIdx >= 0 && items[dropFocusIdx]) {
+      pickDropdown(items[dropFocusIdx].dataset.code);
+    }
+  } else if (e.key === 'Escape') {
+    closeDropdown();
+  }
+}
+
+function pickDropdown(code) {
+  const ap = APS[code];
+  document.getElementById('ap-search').value = `${code} — ${ap.name}`;
+  document.getElementById('ap-clear').style.display = 'block';
+  closeDropdown();
+  selAPCode(code);
+}
+
+function clearApSearch() {
+  document.getElementById('ap-search').value = '';
+  document.getElementById('ap-clear').style.display = 'none';
+  document.getElementById('ap-dropdown').classList.remove('open');
+  dropFocusIdx = -1;
+}
+
+function closeDropdown() {
+  document.getElementById('ap-dropdown').classList.remove('open');
+  dropFocusIdx = -1;
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ap-search-wrap')) closeDropdown();
+});
+
+// ══════════════════════════════════════
+// AIRPORT SELECT
+// ══════════════════════════════════════
+function selAPCode(code) {
+  if (!APS[code]) { showToast('Airport ' + code + ' not found'); return; }
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c.textContent.trim() === code));
+  cur = code; flightCache = {arr:[], dep:[]}; cachedWxData = null;
+  const ap = APS[code];
+  // Update name bar — support both old single-element and new split layout
+  const nameEl = document.getElementById('ap-name-text');
+  if (nameEl) nameEl.innerHTML = `<span>${ap.name}</span> (${code}) — ${ap.icao}`;
+  else document.getElementById('ap-name-bar').innerHTML = `<span>${ap.name}</span> (${code}) — ${ap.icao}`;
+  populateTerminalSelect();
+  document.getElementById('planner-result').style.display='none';
+  renderAll();
+}
+
+// ══════════════════════════════════════
+// RENDER ALL
+// ══════════════════════════════════════
+async function renderAll(){
+  renderCongestion();renderBusyness();renderFlights();
+  await Promise.allSettled([renderWeather(),renderPlanes(),renderTSA(),renderParking(),renderServices()]);
+}
+async function refreshAll(){flightCache={arr:[],dep:[]};await renderAll();}
+
+// ══════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════
+const ap0=APS[cur];
+// Support split name bar layout
+(function(){
+  const nameEl = document.getElementById('ap-name-text');
+  const nameBar = document.getElementById('ap-name-bar');
+  const html = `<span>${ap0.name}</span> (${cur}) — ${ap0.icao}`;
+  if (nameEl) nameEl.innerHTML = html; else if(nameBar) nameBar.innerHTML = html;
+})();
+populateTerminalSelect();
+renderAll();
+startPlannerAutoRefresh();
+setInterval(()=>{renderWeather();renderPlanes();},30000);
+setInterval(()=>{renderTSA();renderParking();renderServices();},60000);
+setInterval(()=>{renderCongestion();renderBusyness();},300000);
+</script>
+
+<script>
+(function(){
+  const APP_KEY = 'aeroiq:';
+  const appState = { installPrompt: null, backendConnected: false };
+
+  // ── SETTINGS HELPERS ─────────────────────────────────────────
+  function readSetting(key, fallback='') {
+    const v = localStorage.getItem(APP_KEY + key);
+    return v !== null ? v : fallback;
+  }
+  function writeSetting(key, value) {
+    if (value === null || value === undefined) localStorage.removeItem(APP_KEY + key);
+    else localStorage.setItem(APP_KEY + key, value);
+  }
+
+  // ── STORAGE SHIM (localStorage-backed for Cloudflare) ────────
+  window.storage = {
+    async get(key) {
+      const value = localStorage.getItem(key);
+      return value === null ? null : { value };
+    },
+    async set(key, value) {
+      localStorage.setItem(key, value);
+      return { ok: true, value };
+    },
+    async delete(key) {
+      localStorage.removeItem(key);
+      return { ok: true };
+    },
+    async list(prefix) {
+      const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix));
+      return { keys };
+    }
+  };
+
+  // ── FAVORITES & RECENTS ──────────────────────────────────────
+  function getFavorites() {
+    try { return JSON.parse(localStorage.getItem(APP_KEY + 'favorites') || '[]'); } catch(e) { return []; }
+  }
+  function setFavorites(list) {
+    localStorage.setItem(APP_KEY + 'favorites', JSON.stringify([...new Set(list)]));
+  }
+  function getRecents() {
+    try { return JSON.parse(localStorage.getItem(APP_KEY + 'recentAirports') || '[]'); } catch(e) { return []; }
+  }
+  function addRecentAirport(code) {
+    const next = [code, ...getRecents().filter(v => v !== code)].slice(0, 8);
+    localStorage.setItem(APP_KEY + 'recentAirports', JSON.stringify(next));
+  }
+  function isFavorite(code) { return getFavorites().includes(code); }
+
+  // ── STAR BUTTON ──────────────────────────────────────────────
+  function updateFavStar(code) {
+    const btn = document.getElementById('fav-star-btn');
+    if (!btn) return;
+    const fav = isFavorite(code);
+    btn.textContent = fav ? '★' : '☆';
+    btn.style.color = fav ? 'var(--yellow)' : 'var(--muted2)';
+    btn.title = fav ? 'Remove from saved' : 'Save airport';
+  }
+  window.updateFavStar = updateFavStar;
+
+  // ── TOGGLE FAVORITE ──────────────────────────────────────────
+  window.toggleFavoriteAirport = function(code) {
+    code = code || cur;
+    const favs = getFavorites();
+    if (favs.includes(code)) {
+      setFavorites(favs.filter(v => v !== code));
+      showToast(code + ' removed from saved');
+    } else {
+      setFavorites([code, ...favs]);
+      showToast('★ ' + code + ' saved!');
+    }
+    updateFavStar(code);
+    renderFavoritesPage();
+  };
+
+  // ── RECENTS ──────────────────────────────────────────────────
+  window.pickRecentAirport = function(code) { selAPCode(code); };
+
+  // ── OFFLINE BANNER ───────────────────────────────────────────
+  function setOfflineBanner() {
+    const b = document.getElementById('offline-banner');
+    if (b) b.classList.toggle('show', !navigator.onLine);
+  }
+  window.addEventListener('online',  () => { setOfflineBanner(); refreshAll(); });
+  window.addEventListener('offline', () => setOfflineBanner());
+  setOfflineBanner();
+
+  // ── INSTALL / PWA ────────────────────────────────────────────
+  function isInstalled() {
+    return window.matchMedia('(display-mode: standalone)').matches || !!window.navigator.standalone;
+  }
+
+  window.promptInstallApp = async function() {
+    if (appState.installPrompt) {
+      try {
+        appState.installPrompt.prompt();
+        const { outcome } = await appState.installPrompt.userChoice;
+        if (outcome === 'accepted') showToast('✓ AeroIQ installed!');
+      } catch(e) {}
+      appState.installPrompt = null;
+      renderEnhancements();
+      return;
+    }
+    // Fallback instructions
+    const ua = navigator.userAgent;
+    if (/iPhone|iPad|iPod/.test(ua)) {
+      showToast('In Safari: tap Share → Add to Home Screen');
+    } else if (/Android/.test(ua)) {
+      showToast('Tap the 3-dot menu → Install App or Add to Home Screen');
+    } else {
+      showToast('Click the ⊕ icon in the address bar to install');
+    }
+  };
+
+  window.dismissInstallBanner = function() {
+    writeSetting('installDismissed', '1');
+    const b = document.getElementById('install-banner');
+    if (b) b.classList.remove('show');
+  };
+
+  function registerPWA() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .catch(err => console.warn('[AeroIQ] SW failed:', err.message));
+    }
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      appState.installPrompt = e;
+      renderEnhancements();
+    });
+    window.addEventListener('appinstalled', () => {
+      appState.installPrompt = null;
+      const b = document.getElementById('install-banner');
+      if (b) b.classList.remove('show');
+      const row = document.getElementById('install-setting-row');
+      if (row) row.style.display = 'none';
+      showToast('✓ AeroIQ installed successfully!');
+      renderEnhancements();
+    });
+  }
+
+  // ── NOTIFICATIONS ────────────────────────────────────────────
+  function remindersEnabled() {
+    return localStorage.getItem(APP_KEY + 'notificationsEnabled') === 'true';
+  }
+
+  window.toggleNotifications = async function() {
+    if (remindersEnabled()) {
+      writeSetting('notificationsEnabled', 'false');
+      showToast('Notifications turned off');
+      renderEnhancements();
+    } else {
+      await window.enableAeroIQNotifications();
+    }
+  };
+
+  window.enableAeroIQNotifications = async function() {
+    if (!('Notification' in window)) {
+      showToast('Notifications not supported in this browser');
+      return;
+    }
+    const result = await Notification.requestPermission();
+    writeSetting('notificationsEnabled', result === 'granted' ? 'true' : 'false');
+    if (result === 'granted') {
+      showToast('✓ Notifications enabled');
+    } else {
+      showToast('Notifications were not allowed');
+    }
+    renderEnhancements();
+  };
+
+  window.disableAeroIQNotifications = function() {
+    writeSetting('notificationsEnabled', 'false');
+    showToast('Notifications turned off');
+    renderEnhancements();
+  };
+
+  // ── SETTINGS ACTIONS ─────────────────────────────────────────
+  window.clearAllData = function() {
+    if (!confirm('Clear all saved airports, history, and reports?')) return;
+    Object.keys(localStorage).filter(k => k.startsWith(APP_KEY) || k.startsWith('report:')).forEach(k => localStorage.removeItem(k));
+    showToast('All data cleared');
+    updateFavStar(cur);
+    renderEnhancements();
+  };
+
+  // ── WRAP selAPCode TO TRACK RECENTS ──────────────────────────
+  const _origSelAPCode = selAPCode;
+  selAPCode = function(code) {
+    _origSelAPCode(code);
+    addRecentAirport(code);
+    updateFavStar(code);
+    renderFavoritesPage();
+  };
+
+  // ── WRAP calculateDeparture TO SYNC UI ───────────────────────
+  const _origCalc = calculateDeparture;
+  calculateDeparture = async function() {
+    await _origCalc();
+    renderEnhancements();
+  };
+
+  // ── CHIP KEYBOARD ACCESS ─────────────────────────────────────
+  function enhanceChips() {
+    document.querySelectorAll('.chip').forEach(chip => {
+      if (!chip.dataset.kbdBound) {
+        chip.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); chip.click(); }
+        });
+        chip.dataset.kbdBound = '1';
+      }
+    });
+  }
+
+  // ── RENDER FAVORITES PAGE ────────────────────────────────────
+  function renderFavoritesPage() {
+    const favorites = getFavorites();
+    const recents   = getRecents();
+
+    const favList = document.getElementById('fav-list');
+    if (favList) {
+      if (favorites.length === 0) {
+        favList.innerHTML = '<div class="empty-state"><div class="empty-icon">⭐</div><div>No saved airports yet.</div><div style="font-size:11px;margin-top:4px;font-family:var(--font-mono);color:var(--muted)">Tap ☆ next to any airport name to save it.</div></div>';
+      } else {
+        favList.innerHTML = favorites.map(code => {
+          const ap = APS[code];
+          if (!ap) return '';
+          return `<div class="fav-row" onclick="selAPCode('${code}');switchPage('home')">
+            <div class="fav-code">${code}</div>
+            <div class="fav-info">
+              <div class="fav-name">${ap.name}</div>
+              <div class="fav-city">${ap.city}</div>
+            </div>
+            <div class="fav-actions">
+              <button class="fav-remove" type="button" onclick="event.stopPropagation();toggleFavoriteAirport('${code}')" aria-label="Remove">✕</button>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    const recentsGrid = document.getElementById('recents-grid');
+    if (recentsGrid) {
+      recentsGrid.innerHTML = recents.length
+        ? recents.map(code => `<button class="recent-chip" type="button" onclick="selAPCode('${code}');switchPage('home')">${code}</button>`).join('')
+        : '<span style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">No recent airports yet</span>';
+    }
+  }
+
+  // ── RENDER ENHANCEMENTS (install banner, settings state) ─────
+  function renderEnhancements() {
+    // Install banner — show smart guidance per browser
+    const banner = document.getElementById('install-banner');
+    if (banner) {
+      const dismissed = readSetting('installDismissed');
+      if (isInstalled() || dismissed) {
+        banner.classList.remove('show');
+      } else if (appState.installPrompt) {
+        // Chrome/Android native prompt available
+        document.getElementById('ib-icon').textContent = '📲';
+        document.getElementById('ib-text').textContent = 'Install AeroIQ';
+        document.getElementById('ib-sub').textContent = 'Add to your home screen for the full app';
+        document.getElementById('ib-btn').style.display = '';
+        banner.classList.add('show');
+      } else {
+        // No native prompt — show browser-specific instructions
+        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        const isChrome = /chrome/i.test(navigator.userAgent) && !/edg/i.test(navigator.userAgent);
+        const isEdge = /edg/i.test(navigator.userAgent);
+        const ibBtn = document.getElementById('ib-btn');
+        if (isIOS && isSafari) {
+          document.getElementById('ib-icon').textContent = '📤';
+          document.getElementById('ib-text').textContent = 'Add to Home Screen';
+          document.getElementById('ib-sub').textContent = 'Tap Share  →  "Add to Home Screen"';
+          ibBtn.style.display = 'none';
+          banner.classList.add('show');
+        } else if (isChrome || isEdge) {
+          document.getElementById('ib-icon').textContent = '💻';
+          document.getElementById('ib-text').textContent = 'Install AeroIQ';
+          document.getElementById('ib-sub').textContent = 'Click the ⊕ icon in the address bar to install';
+          ibBtn.style.display = 'none';
+          banner.classList.add('show');
+        }
+      }
+    }
+
+    // Settings: install row visibility
+    const installRow = document.getElementById('install-setting-row');
+    if (installRow) installRow.style.display = isInstalled() ? 'none' : '';
+
+    // Settings: notification toggle
+    const toggle = document.getElementById('notif-toggle');
+    if (toggle) toggle.classList.toggle('on', remindersEnabled());
+
+    // Favorites page
+    renderFavoritesPage();
+    enhanceChips();
+  }
+
+  // ── PAGE NAVIGATION ──────────────────────────────────────────
+  window.switchPage = function(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const pg  = document.getElementById('page-' + page);
+    const nav = document.getElementById('nav-' + page);
+    if (pg)  pg.classList.add('active');
+    if (nav) nav.classList.add('active');
+    window.scrollTo(0, 0);
+    // Re-populate terminal select when entering planner
+    if (page === 'planner') populatePlannerTerminals();
+    renderEnhancements();
+  };
+
+  // ── BOOT ─────────────────────────────────────────────────────
+  enhanceChips();
+  registerPWA();
+  addRecentAirport(cur);
+  updateFavStar(cur);
+  renderEnhancements();
+
+})();
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// GEOLOCATION
+// ══════════════════════════════════════════════════════════════
+window.detectNearestAirport = function() {
+  const btn = document.getElementById('geo-btn');
+
+  if (!('geolocation' in navigator)) {
+    showToast('Location not supported on this device');
+    return;
+  }
+  // Must be HTTPS — Cloudflare handles this automatically
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+    showToast('Location requires HTTPS — works on the live site');
+    return;
+  }
+
+  if (btn) { btn.classList.add('locating'); btn.textContent = '⌛'; }
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      const nearest = findNearestAirport(lat, lon);
+
+      if (btn) { btn.classList.remove('locating'); btn.classList.add('located'); btn.textContent = '📍'; }
+      setTimeout(() => { if (btn) { btn.classList.remove('located'); btn.textContent = '📍'; } }, 4000);
+
+      // Show geo banner
+      const banner = document.getElementById('geo-banner');
+      const label  = document.getElementById('geo-airport-label');
+      if (banner && label) {
+        label.textContent = nearest.code + ' — ' + nearest.name;
+        banner.classList.add('show');
+        setTimeout(() => banner.classList.remove('show'), 6000);
+      }
+
+      if (nearest.dist < 150 && nearest.code !== cur) {
+        selAPCode(nearest.code);
+        showToast('📍 Switched to ' + nearest.code);
+      } else if (nearest.code === cur) {
+        showToast('📍 Already showing ' + nearest.code);
+      } else {
+        showToast('📍 Nearest: ' + nearest.code + ' (' + Math.round(nearest.dist) + ' km)');
+      }
+    },
+    err => {
+      if (btn) { btn.classList.remove('locating'); btn.textContent = '📍'; }
+      const msgs = { 1: 'Location permission denied — please allow in browser settings', 2: 'Location unavailable', 3: 'Location timed out — try again' };
+      showToast(msgs[err.code] || 'Could not get location');
+    },
+    { timeout: 10000, maximumAge: 120000, enableHighAccuracy: false }
+  );
+};
+
+function findNearestAirport(lat, lon) {
+  let best = null, bestDist = Infinity;
+  for (const [code, ap] of Object.entries(APS)) {
+    const dist = haversineKm(lat, lon, ap.lat, ap.lon);
+    if (dist < bestDist) { bestDist = dist; best = { code, name: ap.name, dist }; }
+  }
+  return best || { code: 'LAX', name: 'Los Angeles International', dist: 9999 };
+}
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ══════════════════════════════════════════════════════════════
+// SHARE
+// ══════════════════════════════════════════════════════════════
+window.shareFlightInfo = async function(num, city, time, status) {
+  const ap = APS[cur];
+  const dir = flightTab === 'arr' ? 'arriving from' : 'departing to';
+  const statusText = {delayed:'⚠ Delayed', ontime:'✅ On Time', boarding:'🚪 Boarding'}[status] || '🕐 Scheduled';
+  const text = ['✈ AeroIQ Flight Update', `${num} ${dir} ${city}`, `Time: ${time} — ${statusText}`, `Airport: ${ap.name} (${cur})`, '', 'via AeroIQ'].join('\n');
+  await nativeShare({ title: 'Flight ' + num, text, url: location.href });
+};
+
+window.shareWaitTimes = async function(type) {
+  const ap  = APS[cur];
+  const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  let lines = ['⏱ AeroIQ Wait Times — ' + ap.name + ' (' + cur + ')', 'As of ' + now, ''];
+  if (type === 'tsa') {
+    lines.push('🛡 TSA Security');
+    ap.tsa.forEach((cp, i) => {
+      const h = new Date().getHours();
+      const base = [5,5,6,6,7,8,20,35,30,28,22,20,22,28,30,28,30,38,30,22,15,10,8,6][h];
+      const r = (seed => { let s=seed; return () => { s=(s*9301+49297)%233280; return s/233280; }; })(i*100+h);
+      lines.push('  ' + cp.n + ': ~' + Math.max(2,Math.round(base*(0.7+r()*.6))) + ' min');
+    });
+  }
+  lines.push('', 'Shared from AeroIQ');
+  await nativeShare({ title: 'Wait Times — ' + cur, text: lines.join('\n'), url: location.href });
+};
+
+async function nativeShare({ title, text, url }) {
+  if (navigator.share) {
+    try { await navigator.share({ title, text, url }); return; } catch(e) { if (e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(text + '\n' + url); showToast('📋 Copied to clipboard'); }
+  catch(e) { showToast('Share not available in this browser'); }
+}
+
+  // populate terminal dropdown on planner page (mirrors home page logic)
+  function populatePlannerTerminals() {
+    const sel = document.getElementById('p-terminal');
+    if (!sel) return;
+    const ap = APS[cur];
+    sel.innerHTML = ap.terminals.map(t => `<option value="${t}">Terminal ${t}</option>`).join('');
+  }
+
+  // Set today as default date on planner
+  (function() {
+    const d = document.getElementById('p-flight-date');
+    if (d) d.value = new Date().toISOString().slice(0,10);
+  })();
+
+  // Share planner result
+  window.sharePlannerResult = async function() {
+    const lastCalc = document.getElementById('p-last-calc');
+    const timeline = document.getElementById('p-timeline');
+    if (!timeline || !timeline.textContent.trim()) { showToast('Calculate first'); return; }
+    const ap = APS[cur];
+    const flightNum  = (document.getElementById('p-flight-num')?.value  || '').trim();
+    const flightTime = (document.getElementById('p-flight-time')?.value || '').trim();
+    const dest       = (document.getElementById('p-destination')?.value || '').trim();
+    const lines = [
+      '✈ AeroIQ Departure Plan',
+      flightNum ? 'Flight: ' + flightNum : '',
+      dest ? 'To: ' + dest : '',
+      'Airport: ' + ap.name + ' (' + cur + ')',
+      flightTime ? 'Departure: ' + flightTime : '',
+      '',
+      'Planned with AeroIQ — aeroiq.pages.dev'
+    ].filter(Boolean).join('\n');
+    if (navigator.share) {
+      try { await navigator.share({ title: 'My Departure Plan', text: lines }); return; } catch(e) { if (e.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(lines); showToast('📋 Plan copied to clipboard'); } catch(e) { showToast('Share not supported'); }
+  };
+
+</script>
